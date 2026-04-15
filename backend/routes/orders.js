@@ -1,290 +1,234 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const db = require('../config/database');
-const { authMiddleware } = require('./auth');
+const db = require("../config/database");
 
-// Helper function to generate order number
-function generateOrderNumber() {
-    const timestamp = Date.now().toString().slice(-8);
-    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    return `ORD${timestamp}${random}`;
-}
+// Place order
+router.post("/", async (req, res) => {
+  const connection = await db.getConnection();
 
-// POST /api/orders
-// Create new order
-router.post('/', authMiddleware, async (req, res) => {
-    const connection = await db.getConnection();
-    
-    try {
-        await connection.beginTransaction();
-        
-        const { 
-            address_id, 
-            delivery_slot_id, 
-            delivery_date, 
-            items, // [{ product_id, quantity }]
-            payment_method = 'cash',
-            delivery_notes 
-        } = req.body;
-        
-        // Validation
-        if (!address_id || !delivery_slot_id || !delivery_date || !items || items.length === 0) {
-            throw new Error('Missing required fields');
-        }
-        
-        // Verify address belongs to user
-        const [addresses] = await connection.query(
-            'SELECT id FROM addresses WHERE id = ? AND user_id = ?',
-            [address_id, req.userId]
-        );
-        
-        if (addresses.length === 0) {
-            throw new Error('Invalid address');
-        }
-        
-        // Get product details
-        const productIds = items.map(item => item.product_id);
-        const [products] = await connection.query(`
-            SELECT 
-                id, name, price, discount_percentage, stock_quantity, is_available,
-                ROUND(price - (price * discount_percentage / 100), 2) as discounted_price
-            FROM products
-            WHERE id IN (?) AND is_available = TRUE
-        `, [productIds]);
-        
-        if (products.length !== items.length) {
-            throw new Error('Some products are not available');
-        }
-        
-        // Calculate totals
-        let subtotal = 0;
-        let totalDiscount = 0;
-        const orderItems = items.map(cartItem => {
-            const product = products.find(p => p.id === cartItem.product_id);
-            
-            if (!product) {
-                throw new Error(`Product ${cartItem.product_id} not found`);
-            }
-            
-            if (product.stock_quantity < cartItem.quantity) {
-                throw new Error(`Insufficient stock for ${product.name}`);
-            }
-            
-            const itemPrice = product.price * cartItem.quantity;
-            const itemDiscount = itemPrice * (product.discount_percentage / 100);
-            const itemTotal = itemPrice - itemDiscount;
-            
-            subtotal += itemPrice;
-            totalDiscount += itemDiscount;
-            
-            return {
-                product_id: product.id,
-                product_name: product.name,
-                quantity: cartItem.quantity,
-                unit_price: product.price,
-                discount_percentage: product.discount_percentage,
-                total_price: Math.round(itemTotal * 100) / 100
-            };
-        });
-        
-        const totalAmount = Math.round((subtotal - totalDiscount) * 100) / 100;
-        const orderNumber = generateOrderNumber();
-        
-        // Create order
-        const [orderResult] = await connection.query(`
-            INSERT INTO orders (
-                order_number, user_id, address_id, delivery_slot_id, delivery_date,
-                subtotal, discount_amount, total_amount, payment_method, delivery_notes
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [
-            orderNumber, req.userId, address_id, delivery_slot_id, delivery_date,
-            Math.round(subtotal * 100) / 100, Math.round(totalDiscount * 100) / 100, 
-            totalAmount, payment_method, delivery_notes
-        ]);
-        
-        const orderId = orderResult.insertId;
-        
-        // Insert order items
-        for (const item of orderItems) {
-            await connection.query(`
-                INSERT INTO order_items (
-                    order_id, product_id, product_name, quantity, 
-                    unit_price, discount_percentage, total_price
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
-            `, [
-                orderId, item.product_id, item.product_name, item.quantity,
-                item.unit_price, item.discount_percentage, item.total_price
-            ]);
-            
-            // Update stock
-            await connection.query(
-                'UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ?',
-                [item.quantity, item.product_id]
-            );
-        }
-        
-        await connection.commit();
-        
-        res.json({
-            success: true,
-            message: 'Order placed successfully',
-            order: {
-                id: orderId,
-                order_number: orderNumber,
-                total_amount: totalAmount
-            }
-        });
-        
-    } catch (error) {
+  try {
+    await connection.beginTransaction();
+
+    const {
+      user_id,
+      society_id,
+      delivery_address,
+      delivery_slot_id,
+      items,
+      subtotal,
+      discount_amount,
+      delivery_fee,
+      total_amount,
+      payment_method,
+      special_instructions,
+    } = req.body;
+
+    // Validate required fields
+    if (
+      !user_id ||
+      !society_id ||
+      !delivery_address ||
+      !delivery_slot_id ||
+      !items ||
+      items.length === 0
+    ) {
+      await connection.rollback();
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    // Check stock availability for all items BEFORE creating order
+    for (const item of items) {
+      const [product] = await connection.query(
+        "SELECT stock_quantity, name FROM products WHERE id = ?",
+        [item.product_id],
+      );
+
+      if (product.length === 0) {
         await connection.rollback();
-        console.error('Create order error:', error);
-        res.status(400).json({ error: error.message || 'Failed to create order' });
-    } finally {
-        connection.release();
-    }
-});
-
-// GET /api/orders
-// Get user's orders
-router.get('/', authMiddleware, async (req, res) => {
-    try {
-        const [orders] = await db.query(`
-            SELECT 
-                o.id,
-                o.order_number,
-                o.total_amount,
-                o.payment_method,
-                o.payment_status,
-                o.order_status,
-                o.delivery_date,
-                o.created_at,
-                ds.slot_start,
-                ds.slot_end,
-                s.name as society_name,
-                a.tower_no,
-                a.flat_no
-            FROM orders o
-            JOIN delivery_slots ds ON o.delivery_slot_id = ds.id
-            JOIN addresses a ON o.address_id = a.id
-            JOIN societies s ON a.society_id = s.id
-            WHERE o.user_id = ?
-            ORDER BY o.created_at DESC
-        `, [req.userId]);
-        
-        res.json({ orders });
-        
-    } catch (error) {
-        console.error('Get orders error:', error);
-        res.status(500).json({ error: 'Failed to fetch orders' });
-    }
-});
-
-// GET /api/orders/:id
-// Get order details
-router.get('/:id', authMiddleware, async (req, res) => {
-    try {
-        const { id } = req.params;
-        
-        // Get order details
-        const [orders] = await db.query(`
-            SELECT 
-                o.*,
-                ds.slot_start,
-                ds.slot_end,
-                s.name as society_name,
-                s.area,
-                a.tower_no,
-                a.flat_no,
-                a.landmark
-            FROM orders o
-            JOIN delivery_slots ds ON o.delivery_slot_id = ds.id
-            JOIN addresses a ON o.address_id = a.id
-            JOIN societies s ON a.society_id = s.id
-            WHERE o.id = ? AND o.user_id = ?
-        `, [id, req.userId]);
-        
-        if (orders.length === 0) {
-            return res.status(404).json({ error: 'Order not found' });
-        }
-        
-        // Get order items
-        const [items] = await db.query(`
-            SELECT 
-                oi.*,
-                p.image_url,
-                p.unit
-            FROM order_items oi
-            LEFT JOIN products p ON oi.product_id = p.id
-            WHERE oi.order_id = ?
-        `, [id]);
-        
-        res.json({ 
-            order: orders[0],
-            items 
+        return res.status(400).json({
+          error: `Product ID ${item.product_id} not found`,
         });
-        
-    } catch (error) {
-        console.error('Get order details error:', error);
-        res.status(500).json({ error: 'Failed to fetch order details' });
+      }
+
+      if (product[0].stock_quantity < item.quantity) {
+        await connection.rollback();
+        return res.status(400).json({
+          error: `Insufficient stock for ${product[0].name}. Available: ${product[0].stock_quantity}, Requested: ${item.quantity}`,
+        });
+      }
     }
+
+    // Generate order number
+    const orderNumber = "ORD" + Date.now();
+
+    // Create order
+    const [orderResult] = await connection.query(
+      `INSERT INTO orders (
+                user_id, society_id, delivery_address, delivery_slot_id,
+                order_number, subtotal, discount_amount, delivery_fee, total_amount,
+                payment_method, payment_status, order_status, special_instructions
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'pending', ?)`,
+      [
+        user_id,
+        society_id,
+        delivery_address,
+        delivery_slot_id,
+        orderNumber,
+        subtotal,
+        discount_amount || 0,
+        delivery_fee || 0,
+        total_amount,
+        payment_method,
+        special_instructions || "",
+      ],
+    );
+
+    const orderId = orderResult.insertId;
+
+    // Insert order items and deduct stock
+    for (const item of items) {
+      // Insert order item
+      await connection.query(
+        `INSERT INTO order_items (
+                    order_id, product_id, quantity, unit_price, discount_amount, total_price
+                ) VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+          orderId,
+          item.product_id,
+          item.quantity,
+          item.unit_price,
+          item.discount_amount || 0,
+          item.total_price,
+        ],
+      );
+
+      // Get current stock
+      const [currentStock] = await connection.query(
+        "SELECT stock_quantity FROM products WHERE id = ?",
+        [item.product_id],
+      );
+
+      const oldQuantity = currentStock[0].stock_quantity;
+      const newQuantity = oldQuantity - item.quantity;
+
+      // Deduct stock from products table
+      await connection.query(
+        "UPDATE products SET stock_quantity = ? WHERE id = ?",
+        [newQuantity, item.product_id],
+      );
+
+      // Record stock history
+      await connection.query(
+        `INSERT INTO stock_history (
+                    product_id, change_type, quantity_change, 
+                    old_quantity, new_quantity, order_id, 
+                    notes, created_by
+                ) VALUES (?, 'order', ?, ?, ?, ?, ?, ?)`,
+        [
+          item.product_id,
+          -item.quantity,
+          oldQuantity,
+          newQuantity,
+          orderId,
+          `Stock deducted for order ${orderNumber}`,
+          `user_${user_id}`,
+        ],
+      );
+    }
+
+    await connection.commit();
+
+    res.json({
+      success: true,
+      order_id: orderId,
+      order_number: orderNumber,
+      message: "Order placed successfully",
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error("Order placement error:", error);
+    res.status(500).json({ error: "Failed to place order" });
+  } finally {
+    connection.release();
+  }
 });
 
-// PUT /api/orders/:id/cancel
-// Cancel order (only if pending)
-router.put('/:id/cancel', authMiddleware, async (req, res) => {
-    const connection = await db.getConnection();
-    
-    try {
-        await connection.beginTransaction();
-        
-        const { id } = req.params;
-        
-        // Get order
-        const [orders] = await connection.query(
-            'SELECT * FROM orders WHERE id = ? AND user_id = ?',
-            [id, req.userId]
-        );
-        
-        if (orders.length === 0) {
-            throw new Error('Order not found');
-        }
-        
-        const order = orders[0];
-        
-        if (order.order_status !== 'pending') {
-            throw new Error('Only pending orders can be cancelled');
-        }
-        
-        // Update order status
-        await connection.query(
-            'UPDATE orders SET order_status = ? WHERE id = ?',
-            ['cancelled', id]
-        );
-        
-        // Restore stock
-        const [items] = await connection.query(
-            'SELECT product_id, quantity FROM order_items WHERE order_id = ?',
-            [id]
-        );
-        
-        for (const item of items) {
-            await connection.query(
-                'UPDATE products SET stock_quantity = stock_quantity + ? WHERE id = ?',
-                [item.quantity, item.product_id]
-            );
-        }
-        
-        await connection.commit();
-        
-        res.json({ success: true, message: 'Order cancelled successfully' });
-        
-    } catch (error) {
-        await connection.rollback();
-        console.error('Cancel order error:', error);
-        res.status(400).json({ error: error.message || 'Failed to cancel order' });
-    } finally {
-        connection.release();
+// Get user orders
+router.get("/my-orders", async (req, res) => {
+  try {
+    const { user_id } = req.query;
+
+    if (!user_id) {
+      return res.status(400).json({ error: "user_id required" });
     }
+
+    const [orders] = await db.query(
+      `SELECT o.*, s.name as society_name, ds.slot_time
+             FROM orders o
+             LEFT JOIN societies s ON o.society_id = s.id
+             LEFT JOIN delivery_slots ds ON o.delivery_slot_id = ds.id
+             WHERE o.user_id = ?
+             ORDER BY o.created_at DESC`,
+      [user_id],
+    );
+
+    // Get items for each order
+    for (let order of orders) {
+      const [items] = await db.query(
+        `SELECT oi.*, p.name as product_name, p.unit, p.image_url
+                 FROM order_items oi
+                 JOIN products p ON oi.product_id = p.id
+                 WHERE oi.order_id = ?`,
+        [order.id],
+      );
+      order.items = items;
+    }
+
+    res.json({ success: true, orders });
+  } catch (error) {
+    console.error("Error fetching orders:", error);
+    res.status(500).json({ error: "Failed to fetch orders" });
+  }
+});
+
+// Get single order details
+router.get("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [orders] = await db.query(
+      `SELECT o.*, s.name as society_name, ds.slot_time,
+                    u.name as customer_name, u.mobile
+             FROM orders o
+             LEFT JOIN societies s ON o.society_id = s.id
+             LEFT JOIN delivery_slots ds ON o.delivery_slot_id = ds.id
+             LEFT JOIN users u ON o.user_id = u.id
+             WHERE o.id = ?`,
+      [id],
+    );
+
+    if (orders.length === 0) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    const order = orders[0];
+
+    // Get order items
+    const [items] = await db.query(
+      `SELECT oi.*, p.name as product_name, p.unit, p.image_url
+             FROM order_items oi
+             JOIN products p ON oi.product_id = p.id
+             WHERE oi.order_id = ?`,
+      [id],
+    );
+
+    order.items = items;
+
+    res.json({ success: true, order });
+  } catch (error) {
+    console.error("Error fetching order:", error);
+    res.status(500).json({ error: "Failed to fetch order" });
+  }
 });
 
 module.exports = router;
