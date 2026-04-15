@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#10b981">
+    <meta name="description" content="Order fresh fruits, vegetables, cakes & pastries">
+    
+    <title>FreshCart - Grocery Delivery</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- Icons -->
+    <link rel="apple-touch-icon" href="/icon-192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="/css/styles.css">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- App Container -->
+    <div id="app">
+        <!-- Loading Screen -->
+        <div id="loading-screen" class="loading-screen">
+            <div class="loader"></div>
+            <p>Loading ShiviMart FreshCart...</p>
+        </div>
+
+        <!-- Login Screen -->
+        <div id="login-screen" class="screen" style="display:none;">
+            <div class="login-container">
+                <div class="logo">
+                    <h1>🛒SHIVI MART FreshCart</h1>
+                    <p>Fresh Fruits/Veggies/Cakes/Groceries at your doorstep</p>
+                </div>
+                
+                <form id="login-form" class="form">
+                    <div class="form-group">
+                        <label>Mobile Number</label>
+                        <input 
+                            type="tel" 
+                            id="mobile-input" 
+                            placeholder="Enter 10-digit mobile" 
+                            maxlength="10"
+                            required
+                        >
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">
+                        Send OTP
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- OTP Verification Screen -->
+        <div id="otp-screen" class="screen" style="display:none;">
+            <div class="login-container">
+                <div class="logo">
+                    <h2>Verify OTP</h2>
+                    <p>Enter OTP sent to <span id="mobile-display"></span></p>
+                </div>
+                
+                <form id="otp-form" class="form">
+                    <div class="form-group">
+                        <label>Enter OTP</label>
+                        <input 
+                            type="text" 
+                            id="otp-input" 
+                            placeholder="Enter 6-digit OTP" 
+                            maxlength="6"
+                            required
+                        >
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">
+                        Verify & Login
+                    </button>
+                    <button type="button" id="resend-otp" class="btn btn-link btn-block">
+                        Resend OTP
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Address Selection Screen -->
+        <div id="address-screen" class="screen" style="display:none;">
+            <div class="container">
+                <h2>Delivery Address</h2>
+                
+                <form id="address-form" class="form">
+                    <div class="form-group">
+                        <label>Select Society</label>
+                        <select id="society-select" required>
+                            <option value="">Choose your society...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Tower Number (Optional)</label>
+                        <input type="text" id="tower-input" placeholder="e.g., A, B, 1, 2">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Flat Number</label>
+                        <input type="text" id="flat-input" placeholder="e.g., 101, 202" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Landmark (Optional)</label>
+                        <input type="text" id="landmark-input" placeholder="e.g., Near park">
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary btn-block">
+                        Continue Shopping
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Main App Screen -->
+        <div id="main-screen" class="screen" style="display:none;">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-content">
+                    <h1>🛒 FreshCart</h1>
+                    <button id="cart-btn" class="cart-btn">
+                        🛒 <span id="cart-count">0</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Categories -->
+            <div class="categories" id="categories-container">
+                <!-- Categories will be loaded here -->
+            </div>
+
+            <!-- Products -->
+            <div class="container">
+                <div class="products-header">
+                    <h2 id="products-title">All Products</h2>
+                    <input type="search" id="search-input" placeholder="Search products...">
+                </div>
+                <div class="products-grid" id="products-container">
+                    <!-- Products will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Bottom Navigation -->
+            <nav class="bottom-nav">
+                <button class="nav-item active" data-page="home">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-label">Home</span>
+                </button>
+                <button class="nav-item" data-page="orders">
+                    <span class="nav-icon">📦</span>
+                    <span class="nav-label">Orders</span>
+                </button>
+                <button class="nav-item" data-page="profile">
+                    <span class="nav-icon">👤</span>
+                    <span class="nav-label">Profile</span>
+                </button>
+            </nav>
+        </div>
+
+        <!-- Cart Modal -->
+        <div id="cart-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Your Cart</h2>
+                    <button class="close-btn" id="close-cart">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div id="cart-items">
+                        <!-- Cart items will be loaded here -->
+                    </div>
+                    <div class="cart-summary">
+                        <div class="summary-row">
+                            <span>Subtotal:</span>
+                            <span id="cart-subtotal">₹0</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Discount:</span>
+                            <span id="cart-discount" class="text-green">-₹0</span>
+                        </div>
+                        <div class="summary-row total">
+                            <span>Total:</span>
+                            <span id="cart-total">₹0</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="checkout-btn" class="btn btn-primary btn-block">
+                        Proceed to Checkout
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Checkout Modal -->
+        <div id="checkout-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Select Delivery Slot</h2>
+                    <button class="close-btn" id="close-checkout">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Delivery Date</label>
+                        <input type="date" id="delivery-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Select Time Slot</label>
+                        <div id="slots-container">
+                            <!-- Time slots will be loaded here -->
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Payment Method</label>
+                        <div class="payment-methods">
+                            <label class="radio-label">
+                                <input type="radio" name="payment" value="cash" checked>
+                                <span>💵 Cash on Delivery</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="payment" value="upi">
+                                <span>📱 UPI (Pay to delivery boy)</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="payment" value="card">
+                                <span>💳 Card (Pay to delivery boy)</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="place-order-btn" class="btn btn-primary btn-block">
+                        Place Order - <span id="final-total">₹0</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="/js/config.js"></script>
+    <script src="/js/utils.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/cart.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+</html>
