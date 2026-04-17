@@ -1,3 +1,54 @@
+// ========================================
+// AUTO-LOGIN ON PAGE LOAD
+// ========================================
+
+window.addEventListener("DOMContentLoaded", function () {
+  const isLoggedIn = localStorage.getItem("is_logged_in");
+  const userId = localStorage.getItem("user_id");
+  const mobile = localStorage.getItem("mobile");
+
+  console.log("🔍 Checking session:", { isLoggedIn, userId, mobile });
+
+  if (isLoggedIn === "true" && userId && mobile) {
+    console.log("✅ Session found - Auto login");
+
+    // Restore user data
+    window.currentUser = {
+      id: userId,
+      mobile: mobile,
+      name: localStorage.getItem("user_name") || mobile,
+    };
+
+    // Wait for DOM to be ready, then show main screen
+    setTimeout(() => {
+      const loginScreen = document.getElementById("login-screen");
+      const addressScreen = document.getElementById("address-screen");
+      const mainScreen = document.getElementById("main-screen");
+
+      if (loginScreen) loginScreen.style.display = "none";
+      if (addressScreen) addressScreen.style.display = "none";
+      if (mainScreen) mainScreen.style.display = "block";
+
+      console.log("✅ Main screen shown");
+    }, 200);
+  } else {
+    console.log("❌ No session - Show login");
+  }
+});
+
+// Logout function
+function logoutUser() {
+  if (confirm("Are you sure you want to logout?")) {
+    console.log("🚪 Logging out...");
+    localStorage.clear();
+    window.location.reload();
+  }
+}
+
+// ========================================
+// REST OF YOUR CODE BELOW
+// ========================================
+
 // ============================================
 // MAIN APPLICATION
 // ============================================
@@ -70,7 +121,29 @@ class App {
     }
 
     try {
-      await API.auth.verifyOTP(this.currentMobile, otp);
+      // Verify OTP
+      const response = await API.auth.verifyOTP(this.currentMobile, otp);
+
+      // ✅ SAVE SESSION DATA
+      if (response && response.user) {
+        localStorage.setItem("user_id", response.user.id);
+        localStorage.setItem("mobile", response.user.mobile);
+        localStorage.setItem(
+          "user_name",
+          response.user.name || this.currentMobile,
+        );
+        localStorage.setItem("is_logged_in", "true");
+        localStorage.setItem("token", response.token || "logged_in");
+
+        // Save globally
+        window.currentUser = response.user;
+
+        console.log("✅ Session saved:", {
+          user_id: response.user.id,
+          mobile: response.user.mobile,
+        });
+      }
+
       Utils.showToast("Login successful!", "success");
       await this.showAddressScreen();
     } catch (error) {
