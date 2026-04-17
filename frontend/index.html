@@ -121,18 +121,23 @@
             </div>
         </div>
 
-        <!-- Main App Screen -->
-        <div id="main-screen" class="screen" style="display:none;">
-            <!-- Header -->
-            <header class="header">
-                <div class="header-content">
-                    <h1>🛒 FreshCart</h1>
-                    <button id="cart-btn" class="cart-btn">
-                        🛒 <span id="cart-count">0</span>
-                    </button>
-                </div>
-            </header>
+       <!-- Main App Screen -->
+<div id="main-screen" class="screen" style="display:none;">
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <h1>🛒 ShiviMart</h1>
+            <button id="cart-btn" class="cart-btn">
+                🛒 <span id="cart-count">0</span>
+            </button>
+        </div>
+    </header>
 
+    <!-- Pages Container -->
+    <div class="pages-wrapper">
+        
+        <!-- HOME PAGE (Products) -->
+        <div id="page-home" class="page active">
             <!-- Categories -->
             <div class="categories" id="categories-container">
                 <!-- Categories will be loaded here -->
@@ -148,24 +153,50 @@
                     <!-- Products will be loaded here -->
                 </div>
             </div>
-
-            <!-- Bottom Navigation -->
-            <nav class="bottom-nav">
-                <button class="nav-item active" data-page="home">
-                    <span class="nav-icon">🏠</span>
-                    <span class="nav-label">Home</span>
-                </button>
-                <button class="nav-item" data-page="orders">
-                    <span class="nav-icon">📦</span>
-                    <span class="nav-label">Orders</span>
-                </button>
-                <button class="nav-item" data-page="profile">
-                    <span class="nav-icon">👤</span>
-                    <span class="nav-label">Profile</span>
-                </button>
-            </nav>
         </div>
 
+        <!-- ORDERS PAGE -->
+        <div id="page-orders" class="page" style="display: none;">
+            <div class="container">
+                <h2 style="margin: 20px 0;">My Orders</h2>
+                <div id="orders-list">
+                    <p style="text-align: center; padding: 40px; color: #999;">
+                        Loading your orders...
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- PROFILE PAGE -->
+        <div id="page-profile" class="page" style="display: none;">
+            <div class="container">
+                <h2 style="margin: 20px 0;">My Profile</h2>
+                <div id="profile-content">
+                    <p style="text-align: center; padding: 40px; color: #999;">
+                        Loading profile...
+                    </p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <button class="nav-item active" onclick="switchPage('home')" id="nav-home">
+            <span class="nav-icon">🏠</span>
+            <span class="nav-label">Home</span>
+        </button>
+        <button class="nav-item" onclick="switchPage('orders')" id="nav-orders">
+            <span class="nav-icon">📦</span>
+            <span class="nav-label">Orders</span>
+        </button>
+        <button class="nav-item" onclick="switchPage('profile')" id="nav-profile">
+            <span class="nav-icon">👤</span>
+            <span class="nav-label">Profile</span>
+        </button>
+    </nav>
+</div>
         <!-- Cart Modal -->
         <div id="cart-modal" class="modal">
             <div class="modal-content">
