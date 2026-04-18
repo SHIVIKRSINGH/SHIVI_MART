@@ -2,7 +2,11 @@
 // AUTO-LOGIN ON PAGE LOAD
 // ========================================
 
-window.addEventListener("DOMContentLoaded", function () {
+// ========================================
+// SMART AUTO-LOGIN WITH ADDRESS CHECK
+// ========================================
+
+window.addEventListener("DOMContentLoaded", async function () {
   const isLoggedIn = localStorage.getItem("is_logged_in");
   const userId = localStorage.getItem("user_id");
   const mobile = localStorage.getItem("mobile");
@@ -10,7 +14,7 @@ window.addEventListener("DOMContentLoaded", function () {
   console.log("🔍 Checking session:", { isLoggedIn, userId, mobile });
 
   if (isLoggedIn === "true" && userId && mobile) {
-    console.log("✅ Session found - Auto login");
+    console.log("✅ Session found - Checking address...");
 
     // Restore user data
     window.currentUser = {
@@ -19,22 +23,70 @@ window.addEventListener("DOMContentLoaded", function () {
       name: localStorage.getItem("user_name") || mobile,
     };
 
-    // Wait for DOM to be ready, then show main screen
+    // Check if user has saved address
+    const hasAddress = await checkUserHasAddress(userId);
+
     setTimeout(() => {
       const loginScreen = document.getElementById("login-screen");
       const addressScreen = document.getElementById("address-screen");
       const mainScreen = document.getElementById("main-screen");
 
       if (loginScreen) loginScreen.style.display = "none";
-      if (addressScreen) addressScreen.style.display = "none";
-      if (mainScreen) mainScreen.style.display = "block";
 
-      console.log("✅ Main screen shown");
+      if (hasAddress) {
+        // User has address → Go to products
+        console.log("✅ Address found → Main screen");
+        if (addressScreen) addressScreen.style.display = "none";
+        if (mainScreen) mainScreen.style.display = "block";
+      } else {
+        // User needs to add address
+        console.log("⚠️ No address → Address screen");
+        if (mainScreen) mainScreen.style.display = "none";
+        if (addressScreen) addressScreen.style.display = "block";
+      }
     }, 200);
   } else {
     console.log("❌ No session - Show login");
   }
 });
+
+// Check if user has saved address
+async function checkUserHasAddress(userId) {
+  try {
+    // Check localStorage first (fast)
+    const savedAddress = localStorage.getItem("user_address");
+    const savedSociety = localStorage.getItem("user_society");
+
+    if (savedAddress && savedSociety) {
+      console.log("✅ Address in localStorage");
+      return true;
+    }
+
+    // Check database (via API)
+    const response = await fetch(`${API_URL}/users/${userId}`);
+    const data = await response.json();
+
+    if (data.success && data.user) {
+      const hasAddress = !!(
+        data.user.default_address && data.user.default_society_id
+      );
+
+      if (hasAddress) {
+        // Save to localStorage for faster future checks
+        localStorage.setItem("user_address", data.user.default_address);
+        localStorage.setItem("user_society", data.user.default_society_id);
+        console.log("✅ Address in database");
+      }
+
+      return hasAddress;
+    }
+
+    return false;
+  } catch (error) {
+    console.error("Error checking address:", error);
+    return false; // Show address screen if error
+  }
+}
 
 // Logout function
 function logoutUser() {
@@ -189,6 +241,17 @@ class App {
 
     try {
       await API.societies.addAddress(addressData);
+
+      // ✅ SAVE ADDRESS FLAG TO LOCALSTORAGE
+      localStorage.setItem("has_address", "true");
+      localStorage.setItem("user_society", addressData.society_id);
+      localStorage.setItem(
+        "user_address",
+        `${addressData.flat_no}, ${addressData.tower_no}`,
+      );
+
+      console.log("✅ Address saved to localStorage");
+
       Utils.showToast("Address saved!", "success");
       await this.loadMainScreen();
     } catch (error) {
