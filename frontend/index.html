@@ -7,6 +7,36 @@
     <meta name="description" content="Order fresh fruits, vegetables, cakes & pastries">
     
     <title>FreshCart - Grocery Delivery</title>
+    <style>
+        .stock-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    z-index: 10;
+}
+
+.stock-badge.sold-out {
+    background: #ff4444;
+    color: white;
+}
+
+.stock-badge.low-stock {
+    background: #ff9800;
+    color: white;
+}
+
+.product-card.out-of-stock {
+    opacity: 0.6;
+}
+
+.product-card.out-of-stock img {
+    filter: grayscale(100%);
+}
+    </style>
     
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json">
@@ -285,5 +315,204 @@
     <script src="/js/api.js"></script>
     <script src="/js/cart.js"></script>
     <script src="/js/app.js"></script>
+    <script>
+        // Session persistence - add at top of script section
+window.addEventListener('DOMContentLoaded', function() {
+    // Check for saved session
+    const savedSession = localStorage.getItem('shivimart_session');
+    const savedUser = localStorage.getItem('shivimart_user');
+    
+    if (savedSession && savedUser) {
+        const user = JSON.parse(savedUser);
+        console.log('✅ Session found:', user);
+        // Auto-redirect to products if logged in
+        if (user.mobile) {
+            showScreen('products-screen');
+        }
+    }
+});
+
+// Save session on login - add to your login function
+function saveSession(user) {
+    localStorage.setItem('shivimart_session', 'true');
+    localStorage.setItem('shivimart_user', JSON.stringify(user));
+}
+    </script>
+    <script>
+// ============ SESSION MANAGEMENT ============
+const SessionManager = {
+    save: function(user, address = null) {
+        localStorage.setItem('shivimart_user', JSON.stringify(user));
+        localStorage.setItem('shivimart_session', 'active');
+        if (address) {
+            localStorage.setItem('shivimart_address', JSON.stringify(address));
+        }
+        console.log('✅ Session saved');
+    },
+    
+    load: function() {
+        const user = localStorage.getItem('shivimart_user');
+        const session = localStorage.getItem('shivimart_session');
+        if (user && session === 'active') {
+            return JSON.parse(user);
+        }
+        return null;
+    },
+    
+    getAddress: function() {
+        const addr = localStorage.getItem('shivimart_address');
+        return addr ? JSON.parse(addr) : null;
+    },
+    
+    clear: function() {
+        localStorage.removeItem('shivimart_user');
+        localStorage.removeItem('shivimart_session');
+        localStorage.removeItem('shivimart_address');
+        console.log('✅ Session cleared');
+    }
+};
+
+// Auto-restore session on page load
+window.addEventListener('DOMContentLoaded', function() {
+    const user = SessionManager.load();
+    const address = SessionManager.getAddress();
+    
+    if (user) {
+        console.log('🔍 Session found:', user.mobile);
+        if (address) {
+            console.log('✅ Address exists, going to products');
+            showScreen('products-screen');
+            loadProducts();
+        } else {
+            console.log('⚠️ No address, showing address form');
+            showScreen('address-screen');
+        }
+    } else {
+        console.log('ℹ️ No session, showing login');
+        showScreen('login-screen');
+    }
+});
+
+// ============ BOTTOM NAVIGATION ============
+function setupNavigation() {
+    const navItems = {
+        'nav-home': 'products-screen',
+        'nav-orders': 'orders-screen',
+        'nav-profile': 'profile-screen'
+    };
+    
+    Object.keys(navItems).forEach(navId => {
+        const element = document.getElementById(navId);
+        if (element) {
+            element.addEventListener('click', function(e) {
+                e.preventDefault();
+                const screenId = navItems[navId];
+                console.log('📍 Navigation:', navId, '→', screenId);
+                
+                // Remove active class from all nav items
+                document.querySelectorAll('.nav-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                
+                // Add active class to clicked item
+                this.classList.add('active');
+                
+                // Show the screen
+                showScreen(screenId);
+                
+                // Load data for the screen
+                if (screenId === 'products-screen') loadProducts();
+                if (screenId === 'orders-screen') loadOrders();
+                if (screenId === 'profile-screen') loadProfile();
+            });
+        }
+    });
+    
+    console.log('✅ Navigation setup complete');
+}
+
+// Call this after DOM loads
+window.addEventListener('DOMContentLoaded', setupNavigation);
+
+// ============ PRODUCT DISPLAY WITH STOCK BADGES ============
+function displayProducts(products) {
+    const container = document.getElementById('products-container');
+    if (!container) return;
+    
+    container.innerHTML = products.map(product => {
+        const isOutOfStock = product.stock_quantity <= 0;
+        const stockBadge = isOutOfStock 
+            ? '<div class="stock-badge sold-out">SOLD OUT</div>' 
+            : (product.stock_quantity < 10 
+                ? '<div class="stock-badge low-stock">LOW STOCK</div>' 
+                : '');
+        
+        const buttonHtml = isOutOfStock
+            ? '<button class="add-to-cart-btn" disabled style="background:#ccc;cursor:not-allowed;">Out of Stock</button>'
+            : `<button class="add-to-cart-btn" onclick="addToCart(${product.id})">Add to Cart</button>`;
+        
+        return `
+            <div class="product-card ${isOutOfStock ? 'out-of-stock' : ''}">
+                ${stockBadge}
+                <img src="${product.image_url || '/images/placeholder.jpg'}" 
+                     alt="${product.name}" 
+                     onerror="this.src='/images/placeholder.jpg'">
+                <h3>${product.name}</h3>
+                <p class="category">${product.category}</p>
+                <div class="price-unit">
+                    <span class="price">₹${product.price}</span>
+                    <span class="unit">per ${product.unit}</span>
+                </div>
+                <p class="stock-info">Stock: ${product.stock_quantity} ${product.unit}</p>
+                ${buttonHtml}
+            </div>
+        `;
+    }).join('');
+}
+
+// ============ SMART QUANTITY SELECTOR ============
+function createQuantitySelector(product) {
+    // Determine step based on unit
+    const step = getQuantityStep(product.unit);
+    const min = step;
+    const max = product.stock_quantity;
+    
+    return `
+        <div class="quantity-selector">
+            <button onclick="decreaseQty(${product.id}, ${step})">-</button>
+            <input type="number" 
+                   id="qty-${product.id}" 
+                   value="${step}" 
+                   min="${min}" 
+                   max="${max}" 
+                   step="${step}">
+            <button onclick="increaseQty(${product.id}, ${step}, ${max})">+</button>
+        </div>
+    `;
+}
+
+function getQuantityStep(unit) {
+    const lowerUnit = unit.toLowerCase();
+    
+    if (lowerUnit.includes('kg')) return 0.1;
+    if (lowerUnit.includes('dozen')) return 0.5;
+    if (lowerUnit.includes('liter') || lowerUnit.includes('litre')) return 0.5;
+    if (lowerUnit.includes('piece') || lowerUnit.includes('pcs')) return 1;
+    
+    return 1; // default
+}
+
+function decreaseQty(productId, step) {
+    const input = document.getElementById(`qty-${productId}`);
+    const newVal = Math.max(parseFloat(input.min), parseFloat(input.value) - step);
+    input.value = newVal.toFixed(step < 1 ? 1 : 0);
+}
+
+function increaseQty(productId, step, max) {
+    const input = document.getElementById(`qty-${productId}`);
+    const newVal = Math.min(max, parseFloat(input.value) + step);
+    input.value = newVal.toFixed(step < 1 ? 1 : 0);
+}
+    </script>
 </body>
 </html>
