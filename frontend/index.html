@@ -1315,16 +1315,42 @@ document.getElementById('resend-otp').addEventListener('click', async () => {
 // ============ ADDRESS MANAGEMENT ============
 async function loadSocieties() {
     try {
-        const societies = await apiCall('/societies');
+        console.log('🔍 Loading societies from API...');
+        const data = await apiCall('/societies');
+        console.log('📦 Raw API response:', data);
+        
+        // Handle different response formats
+        let societies = [];
+        if (Array.isArray(data)) {
+            societies = data;
+        } else if (data && Array.isArray(data.societies)) {
+            societies = data.societies;
+        } else if (data && typeof data === 'object') {
+            console.warn('⚠️ Unexpected response format:', data);
+            societies = [];
+        }
+        
+        console.log('🏘️ Parsed societies:', societies);
+        
         const select = document.getElementById('society-select');
+        
+        if (societies.length === 0) {
+            select.innerHTML = '<option value="">No societies available - Please contact admin</option>';
+            console.warn('⚠️ No societies found in database');
+            showToast('No societies available. Please contact admin.', 'error');
+            return;
+        }
         
         select.innerHTML = '<option value="">Choose your society...</option>' +
             societies.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
         
-        console.log('✅ Societies loaded:', societies.length);
+        console.log('✅ Societies loaded successfully:', societies.length);
     } catch (error) {
-        console.error('Failed to load societies:', error);
-        showToast('Failed to load societies', 'error');
+        console.error('❌ Failed to load societies:', error);
+        showToast('Failed to load societies. Please try again.', 'error');
+        
+        const select = document.getElementById('society-select');
+        select.innerHTML = '<option value="">Error loading societies - Please refresh page</option>';
     }
 }
 
