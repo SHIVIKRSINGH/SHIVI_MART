@@ -54,6 +54,14 @@
         .nav-item.active { color: #10b981; }
         .nav-icon { font-size: 24px; }
         .nav-label { font-size: 12px; margin-top: 4px; }
+        
+        /* Toast Notifications */
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+        .toast { background: white; padding: 15px 20px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 250px; animation: slideIn 0.3s ease; }
+        .toast.success { border-left: 4px solid #10b981; }
+        .toast.error { border-left: 4px solid #ff4444; }
+        .toast.info { border-left: 4px solid #3b82f6; }
+        @keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
     </style>
     
     <link rel="stylesheet" href="/css/styles.css">
@@ -186,6 +194,9 @@
             </nav>
         </div>
     </div>
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999;"></div>
 
     <!-- External Scripts (your existing ones) -->
     <script src="/js/config.js"></script>
