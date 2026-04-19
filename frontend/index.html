@@ -340,59 +340,81 @@ function saveSession(user) {
     </script>
     <script>
 // ============ SESSION MANAGEMENT ============
+// ============ SESSION MANAGEMENT (FIXED) ============
 const SessionManager = {
     save: function(user, address = null) {
-        localStorage.setItem('shivimart_user', JSON.stringify(user));
-        localStorage.setItem('shivimart_session', 'active');
+        // Use the SAME keys your existing code uses
+        localStorage.setItem('session', JSON.stringify({
+            isLoggedIn: 'true',
+            userId: user.id,
+            mobile: user.mobile
+        }));
+        localStorage.setItem('user', JSON.stringify(user));
         if (address) {
-            localStorage.setItem('shivimart_address', JSON.stringify(address));
+            localStorage.setItem('address', JSON.stringify(address));
         }
         console.log('✅ Session saved');
     },
     
     load: function() {
-        const user = localStorage.getItem('shivimart_user');
-        const session = localStorage.getItem('shivimart_session');
-        if (user && session === 'active') {
-            return JSON.parse(user);
+        // Check for existing session format
+        const session = localStorage.getItem('session');
+        if (session) {
+            const sessionData = JSON.parse(session);
+            if (sessionData.isLoggedIn === 'true') {
+                return {
+                    id: sessionData.userId,
+                    mobile: sessionData.mobile
+                };
+            }
         }
         return null;
     },
     
     getAddress: function() {
-        const addr = localStorage.getItem('shivimart_address');
+        const addr = localStorage.getItem('address');
         return addr ? JSON.parse(addr) : null;
     },
     
     clear: function() {
-        localStorage.removeItem('shivimart_user');
-        localStorage.removeItem('shivimart_session');
-        localStorage.removeItem('shivimart_address');
+        localStorage.removeItem('session');
+        localStorage.removeItem('user');
+        localStorage.removeItem('address');
         console.log('✅ Session cleared');
     }
 };
 
-// Auto-restore session on page load
+// Auto-restore session on page load (FIXED)
 window.addEventListener('DOMContentLoaded', function() {
-    const user = SessionManager.load();
-    const address = SessionManager.getAddress();
+    console.log('🔍 Checking session...');
     
-    if (user) {
-        console.log('🔍 Session found:', user.mobile);
-        if (address) {
-            console.log('✅ Address exists, going to products');
-            showScreen('products-screen');
-            loadProducts();
-        } else {
-            console.log('⚠️ No address, showing address form');
-            showScreen('address-screen');
+    const session = localStorage.getItem('session');
+    const address = localStorage.getItem('address');
+    
+    if (session) {
+        const sessionData = JSON.parse(session);
+        console.log('🔍 Session data:', sessionData);
+        
+        if (sessionData.isLoggedIn === 'true') {
+            console.log('✅ User logged in:', sessionData.mobile);
+            
+            if (address) {
+                const addressData = JSON.parse(address);
+                console.log('✅ Address exists:', addressData);
+                console.log('→ Going to products screen');
+                showScreen('products-screen');
+                loadProducts();
+            } else {
+                console.log('⚠️ No address, showing address form');
+                showScreen('address-screen');
+            }
+            return; // Exit - don't show login
         }
-    } else {
-        console.log('ℹ️ No session, showing login');
-        showScreen('login-screen');
     }
+    
+    console.log('ℹ️ No valid session, showing login');
+    showScreen('login-screen');
 });
-
 // ============ BOTTOM NAVIGATION ============
 function setupNavigation() {
     const navItems = {
