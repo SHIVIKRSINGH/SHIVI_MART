@@ -317,26 +317,86 @@
     <script src="/js/app.js"></script>
     <script>
         // Session persistence - add at top of script section
-window.addEventListener('DOMContentLoaded', function() {
-    // Check for saved session
-    const savedSession = localStorage.getItem('shivimart_session');
-    const savedUser = localStorage.getItem('shivimart_user');
+// window.addEventListener('DOMContentLoaded', function() {
+//     // Check for saved session
+//     const savedSession = localStorage.getItem('shivimart_session');
+//     const savedUser = localStorage.getItem('shivimart_user');
     
-    if (savedSession && savedUser) {
-        const user = JSON.parse(savedUser);
-        console.log('✅ Session found:', user);
-        // Auto-redirect to products if logged in
-        if (user.mobile) {
+//     if (savedSession && savedUser) {
+//         const user = JSON.parse(savedUser);
+//         console.log('✅ Session found:', user);
+//         // Auto-redirect to products if logged in
+//         if (user.mobile) {
+//             showScreen('products-screen');
+//         }
+//     }
+// });
+
+// // Save session on login - add to your login function
+// function saveSession(user) {
+//     localStorage.setItem('shivimart_session', 'true');
+//     localStorage.setItem('shivimart_user', JSON.stringify(user));
+// }
+
+// ============ ADDRESS FORM HANDLER ============
+window.addEventListener('DOMContentLoaded', function() {
+    const addressForm = document.getElementById('address-form');
+    
+    if (addressForm) {
+        addressForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            console.log('📝 Submitting address...');
+            
+            // Get form fields
+            const society = document.querySelector('select[name="society"]')?.value || 
+                           document.getElementById('society')?.value;
+            const tower = document.querySelector('input[placeholder*="Tower"]')?.value || '';
+            const flat = document.querySelector('input[placeholder*="Flat"]')?.value || '';
+            const landmark = document.querySelector('input[placeholder*="Landmark"]')?.value || '';
+            
+            // Validate
+            if (!society || society.includes('Choose')) {
+                alert('Please select a society');
+                return;
+            }
+            
+            if (!flat) {
+                alert('Please enter your flat number');
+                return;
+            }
+            
+            // Get session
+            const sessionStr = localStorage.getItem('session');
+            if (!sessionStr) {
+                alert('Session expired. Please login again.');
+                showScreen('login-screen');
+                return;
+            }
+            
+            const session = JSON.parse(sessionStr);
+            
+            // Save address
+            const address = {
+                user_id: session.userId,
+                society_id: society,
+                tower: tower,
+                flat: flat,
+                landmark: landmark,
+                mobile: session.mobile
+            };
+            
+            localStorage.setItem('address', JSON.stringify(address));
+            console.log('✅ Address saved:', address);
+            
+            // Navigate to products
+            console.log('→ Going to products...');
             showScreen('products-screen');
-        }
+            loadProducts();
+        });
+        
+        console.log('✅ Address form ready');
     }
 });
-
-// Save session on login - add to your login function
-function saveSession(user) {
-    localStorage.setItem('shivimart_session', 'true');
-    localStorage.setItem('shivimart_user', JSON.stringify(user));
-}
     </script>
     <script>
 // ============ SESSION MANAGEMENT ============
@@ -450,8 +510,8 @@ window.addEventListener('DOMContentLoaded', function() {
 });
 
 
-// ============ BOTTOM NAVIGATION ============
-function setupNavigation() {
+// ============ NAVIGATION SETUP ============
+window.addEventListener('DOMContentLoaded', function() {
     const navItems = {
         'nav-home': 'products-screen',
         'nav-orders': 'orders-screen',
@@ -464,29 +524,28 @@ function setupNavigation() {
             element.addEventListener('click', function(e) {
                 e.preventDefault();
                 const screenId = navItems[navId];
-                console.log('📍 Navigation:', navId, '→', screenId);
                 
-                // Remove active class from all nav items
+                // Remove active from all
                 document.querySelectorAll('.nav-item').forEach(item => {
                     item.classList.remove('active');
                 });
                 
-                // Add active class to clicked item
+                // Add active to this
                 this.classList.add('active');
                 
-                // Show the screen
+                // Show screen
                 showScreen(screenId);
                 
-                // Load data for the screen
+                // Load data
                 if (screenId === 'products-screen') loadProducts();
-                if (screenId === 'orders-screen') loadOrders();
-                if (screenId === 'profile-screen') loadProfile();
+                if (screenId === 'orders-screen' && typeof loadOrders === 'function') loadOrders();
+                if (screenId === 'profile-screen' && typeof loadProfile === 'function') loadProfile();
             });
         }
     });
     
-    console.log('✅ Navigation setup complete');
-}
+    console.log('✅ Navigation ready');
+});
 
 // Call this after DOM loads
 window.addEventListener('DOMContentLoaded', setupNavigation);
