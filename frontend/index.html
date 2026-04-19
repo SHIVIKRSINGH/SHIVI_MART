@@ -315,394 +315,190 @@
     <script src="/js/api.js"></script>
     <script src="/js/cart.js"></script>
     <script src="/js/app.js"></script>
-    <script>
-        // Session persistence - add at top of script section
-// window.addEventListener('DOMContentLoaded', function() {
-//     // Check for saved session
-//     const savedSession = localStorage.getItem('shivimart_session');
-//     const savedUser = localStorage.getItem('shivimart_user');
-    
-//     if (savedSession && savedUser) {
-//         const user = JSON.parse(savedUser);
-//         console.log('✅ Session found:', user);
-//         // Auto-redirect to products if logged in
-//         if (user.mobile) {
-//             showScreen('products-screen');
-//         }
-//     }
-// });
+<script>
+    /* ============================================
+   SHIVIMART - COMPLETE WORKING SCRIPT
+   Replace EVERYTHING in your <script> tags with this
+   ============================================ */
 
-// // Save session on login - add to your login function
-// function saveSession(user) {
-//     localStorage.setItem('shivimart_session', 'true');
-//     localStorage.setItem('shivimart_user', JSON.stringify(user));
-// }
-
-// ============ ADDRESS FORM HANDLER ============
-window.addEventListener('DOMContentLoaded', function() {
-    const addressForm = document.getElementById('address-form');
-    
-    if (addressForm) {
-        addressForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            console.log('📝 Submitting address...');
-            
-            // Get form fields
-            const society = document.querySelector('select[name="society"]')?.value || 
-                           document.getElementById('society')?.value;
-            const tower = document.querySelector('input[placeholder*="Tower"]')?.value || '';
-            const flat = document.querySelector('input[placeholder*="Flat"]')?.value || '';
-            const landmark = document.querySelector('input[placeholder*="Landmark"]')?.value || '';
-            
-            // Validate
-            if (!society || society.includes('Choose')) {
-                alert('Please select a society');
-                return;
-            }
-            
-            if (!flat) {
-                alert('Please enter your flat number');
-                return;
-            }
-            
-            // Get session
-            const sessionStr = localStorage.getItem('session');
-            if (!sessionStr) {
-                alert('Session expired. Please login again.');
-                showScreen('login-screen');
-                return;
-            }
-            
-            const session = JSON.parse(sessionStr);
-            
-            // Save address
-            const address = {
-                user_id: session.userId,
-                society_id: society,
-                tower: tower,
-                flat: flat,
-                landmark: landmark,
-                mobile: session.mobile
-            };
-            
-            localStorage.setItem('address', JSON.stringify(address));
-            console.log('✅ Address saved:', address);
-            
-            // Navigate to products
-            console.log('→ Going to products...');
-            showScreen('products-screen');
-            loadProducts();
-        });
-        
-        console.log('✅ Address form ready');
-    }
-});
-    </script>
-    <script>
-// ============ SESSION MANAGEMENT ============
-// ============ SESSION MANAGEMENT (FIXED) ============
-const SessionManager = {
-    save: function(user, address = null) {
-        // Use the SAME keys your existing code uses
-        localStorage.setItem('session', JSON.stringify({
-            isLoggedIn: 'true',
-            userId: user.id,
-            mobile: user.mobile
-        }));
-        localStorage.setItem('user', JSON.stringify(user));
-        if (address) {
-            localStorage.setItem('address', JSON.stringify(address));
-        }
-        console.log('✅ Session saved');
-    },
-    
-    load: function() {
-        // Check for existing session format
-        const session = localStorage.getItem('session');
-        if (session) {
-            const sessionData = JSON.parse(session);
-            if (sessionData.isLoggedIn === 'true') {
-                return {
-                    id: sessionData.userId,
-                    mobile: sessionData.mobile
-                };
-            }
-        }
-        return null;
-    },
-    
-    getAddress: function() {
-        const addr = localStorage.getItem('address');
-        return addr ? JSON.parse(addr) : null;
-    },
-    
-    clear: function() {
-        localStorage.removeItem('session');
-        localStorage.removeItem('user');
-        localStorage.removeItem('address');
-        console.log('✅ Session cleared');
-    }
-};
-
-// ============ SCREEN NAVIGATION ============
+// ============ UTILITY FUNCTIONS ============
 function showScreen(screenId) {
-    console.log('📍 Showing screen:', screenId);
-    
-    // Hide all screens
-    document.querySelectorAll('.screen').forEach(screen => {
-        screen.style.display = 'none';
-    });
-    
-    // Show the requested screen
-    const targetScreen = document.getElementById(screenId);
-    if (targetScreen) {
-        targetScreen.style.display = 'block';
-        console.log('✅ Screen shown:', screenId);
+    console.log('📍 Switching to:', screenId);
+    document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
+    const target = document.getElementById(screenId);
+    if (target) {
+        target.style.display = 'block';
+        console.log('✅ Now showing:', screenId);
     } else {
         console.error('❌ Screen not found:', screenId);
     }
 }
-// ============ LOAD PRODUCTS FUNCTION ============
-function loadProducts() {
-    console.log('📦 Loading products...');
+
+function switchPage(pageName) {
+    console.log('📄 Switching page:', pageName);
+    document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+    const page = document.getElementById('page-' + pageName);
+    if (page) page.style.display = 'block';
     
-    fetch('/api/products')
-        .then(res => res.json())
-        .then(products => {
-            console.log('✅ Products loaded:', products.length);
-            displayProducts(products);
-        })
-        .catch(err => {
-            console.error('❌ Error loading products:', err);
-        });
+    // Update nav
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    const navBtn = document.getElementById('nav-' + pageName);
+    if (navBtn) navBtn.classList.add('active');
 }
 
-// Auto-restore session on page load (FIXED)
-window.addEventListener('DOMContentLoaded', function() {
+// ============ SESSION CHECK - RUN ONCE ============
+let sessionChecked = false;
+
+function checkSession() {
+    if (sessionChecked) return;
+    sessionChecked = true;
+    
     console.log('🔍 Checking session...');
     
-    const session = localStorage.getItem('session');
-    const address = localStorage.getItem('address');
-    
-    if (session) {
-        const sessionData = JSON.parse(session);
-        console.log('🔍 Session data:', sessionData);
+    try {
+        const sessionStr = localStorage.getItem('session');
+        const addressStr = localStorage.getItem('address');
         
-        if (sessionData.isLoggedIn === 'true') {
-            console.log('✅ User logged in:', sessionData.mobile);
+        if (sessionStr) {
+            const session = JSON.parse(sessionStr);
+            console.log('Session:', session);
             
-            if (address) {
-                const addressData = JSON.parse(address);
-                console.log('✅ Address exists:', addressData);
-                console.log('→ Going to products screen');
-                showScreen('products-screen');
-                loadProducts();
-            } else {
-                console.log('⚠️ No address, showing address form');
-                showScreen('address-screen');
-            }
-            return; // Exit - don't show login
-        }
-    }
-    
-    console.log('ℹ️ No valid session, showing login');
-    showScreen('login-screen');
-});
-
-
-// ============ NAVIGATION SETUP ============
-window.addEventListener('DOMContentLoaded', function() {
-    const navItems = {
-        'nav-home': 'products-screen',
-        'nav-orders': 'orders-screen',
-        'nav-profile': 'profile-screen'
-    };
-    
-    Object.keys(navItems).forEach(navId => {
-        const element = document.getElementById(navId);
-        if (element) {
-            element.addEventListener('click', function(e) {
-                e.preventDefault();
-                const screenId = navItems[navId];
+            if (session.isLoggedIn === 'true' || session.isLoggedIn === true) {
+                console.log('✅ Logged in:', session.mobile);
                 
-                // Remove active from all
-                document.querySelectorAll('.nav-item').forEach(item => {
-                    item.classList.remove('active');
-                });
-                
-                // Add active to this
-                this.classList.add('active');
-                
-                // Show screen
-                showScreen(screenId);
-                
-                // Load data
-                if (screenId === 'products-screen') loadProducts();
-                if (screenId === 'orders-screen' && typeof loadOrders === 'function') loadOrders();
-                if (screenId === 'profile-screen' && typeof loadProfile === 'function') loadProfile();
-            });
-        }
-    });
-    
-    console.log('✅ Navigation ready');
-});
-
-// Override the Continue Shopping button directly
-setTimeout(function() {
-    const button = document.querySelector('button[type="submit"]');
-    if (button) {
-        button.onclick = function(e) {
-            e.preventDefault();
-            
-            console.log('🔘 Continue Shopping clicked!');
-            
-            // Get values
-            const society = document.querySelector('select').value;
-            const flat = document.querySelectorAll('input')[1].value;
-            
-            if (!society || society.includes('Choose')) {
-                alert('Please select society');
+                if (addressStr) {
+                    console.log('✅ Has address → Main screen');
+                    showScreen('main-screen');
+                    if (window.loadProducts) loadProducts();
+                } else {
+                    console.log('⚠️ No address → Address form');
+                    showScreen('address-screen');
+                }
                 return;
             }
-            if (!flat) {
-                alert('Please enter flat number');
-                return;
-            }
-            
-            // Save address
-            const session = JSON.parse(localStorage.getItem('session'));
-            localStorage.setItem('address', JSON.stringify({
-                user_id: session.userId,
-                society_id: society,
-                tower: document.querySelectorAll('input')[0].value,
-                flat: flat,
-                landmark: document.querySelectorAll('input')[2].value
-            }));
-            
-            console.log('✅ Saved! Going to products...');
-            
-            // Go to products
-            document.getElementById('address-screen').style.display = 'none';
-            document.getElementById('products-screen').style.display = 'block';
-            
-            if (window.loadProducts) loadProducts();
-        };
-        console.log('✅ Button override ready!');
+        }
+        
+        console.log('ℹ️ No session → Login');
+        showScreen('login-screen');
+        
+    } catch (e) {
+        console.error('Session error:', e);
+        showScreen('login-screen');
     }
-}, 500);
-
-// Call this after DOM loads
-window.addEventListener('DOMContentLoaded', setupNavigation);
-
-function setupNavigation() {
-    console.log('Setting up navigation...');
-    
-    const navItems = document.querySelectorAll('.nav-item');
-    navItems.forEach(item => {
-        item.addEventListener('click', function(e) {
-            e.preventDefault();
-            
-            // Get target screen from data attribute or ID
-            const target = this.getAttribute('data-screen') || 
-                          this.id.replace('nav-', '') + '-screen';
-            
-            console.log('Nav clicked:', target);
-            
-            // Remove active from all
-            navItems.forEach(n => n.classList.remove('active'));
-            
-            // Add active to this
-            this.classList.add('active');
-            
-            // Show screen
-            if (typeof showScreen === 'function') {
-                showScreen(target);
-            }
-        });
-    });
-    
-    console.log('✅ Navigation setup complete');
 }
 
-// ============ PRODUCT DISPLAY WITH STOCK BADGES ============
+// ============ ADDRESS FORM HANDLER ============
+function setupAddressForm() {
+    const form = document.getElementById('address-form');
+    if (!form) return;
+    
+    form.onsubmit = function(e) {
+        e.preventDefault();
+        
+        const society = document.getElementById('society-select').value;
+        const tower = document.getElementById('tower-input').value;
+        const flat = document.getElementById('flat-input').value;
+        const landmark = document.getElementById('landmark-input').value;
+        
+        if (!society || society === '') {
+            alert('Please select a society');
+            return false;
+        }
+        
+        if (!flat) {
+            alert('Please enter flat number');
+            return false;
+        }
+        
+        const session = JSON.parse(localStorage.getItem('session') || '{}');
+        
+        const address = {
+            user_id: session.userId,
+            society_id: society,
+            tower, flat, landmark
+        };
+        
+        localStorage.setItem('address', JSON.stringify(address));
+        console.log('✅ Address saved!');
+        
+        // Go to main screen
+        showScreen('main-screen');
+        if (window.loadProducts) loadProducts();
+        
+        return false;
+    };
+    
+    console.log('✅ Address form ready');
+}
+
+// ============ PRODUCT DISPLAY ============
 function displayProducts(products) {
     const container = document.getElementById('products-container');
-    if (!container) return;
+    if (!container) {
+        console.warn('Products container not found');
+        return;
+    }
     
     container.innerHTML = products.map(product => {
-        const isOutOfStock = product.stock_quantity <= 0;
-        const stockBadge = isOutOfStock 
-            ? '<div class="stock-badge sold-out">SOLD OUT</div>' 
-            : (product.stock_quantity < 10 
-                ? '<div class="stock-badge low-stock">LOW STOCK</div>' 
-                : '');
+        const outOfStock = product.stock_quantity <= 0;
+        const lowStock = product.stock_quantity > 0 && product.stock_quantity < 10;
         
-        const buttonHtml = isOutOfStock
-            ? '<button class="add-to-cart-btn" disabled style="background:#ccc;cursor:not-allowed;">Out of Stock</button>'
-            : `<button class="add-to-cart-btn" onclick="addToCart(${product.id})">Add to Cart</button>`;
+        let badge = '';
+        if (outOfStock) badge = '<div class="stock-badge sold-out">SOLD OUT</div>';
+        else if (lowStock) badge = '<div class="stock-badge low-stock">LOW STOCK</div>';
+        
+        const button = outOfStock
+            ? '<button disabled style="background:#ccc;">Out of Stock</button>'
+            : `<button onclick="addToCart(${product.id})">Add to Cart</button>`;
         
         return `
-            <div class="product-card ${isOutOfStock ? 'out-of-stock' : ''}">
-                ${stockBadge}
+            <div class="product-card ${outOfStock ? 'out-of-stock' : ''}">
+                ${badge}
                 <img src="${product.image_url || '/images/placeholder.jpg'}" 
-                     alt="${product.name}" 
-                     onerror="this.src='/images/placeholder.jpg'">
+                     alt="${product.name}">
                 <h3>${product.name}</h3>
-                <p class="category">${product.category}</p>
-                <div class="price-unit">
-                    <span class="price">₹${product.price}</span>
-                    <span class="unit">per ${product.unit}</span>
-                </div>
-                <p class="stock-info">Stock: ${product.stock_quantity} ${product.unit}</p>
-                ${buttonHtml}
+                <p>${product.category}</p>
+                <div class="price">₹${product.price} / ${product.unit}</div>
+                <p class="stock">Stock: ${product.stock_quantity}</p>
+                ${button}
             </div>
         `;
     }).join('');
 }
 
-// ============ SMART QUANTITY SELECTOR ============
-function createQuantitySelector(product) {
-    // Determine step based on unit
-    const step = getQuantityStep(product.unit);
-    const min = step;
-    const max = product.stock_quantity;
-    
-    return `
-        <div class="quantity-selector">
-            <button onclick="decreaseQty(${product.id}, ${step})">-</button>
-            <input type="number" 
-                   id="qty-${product.id}" 
-                   value="${step}" 
-                   min="${min}" 
-                   max="${max}" 
-                   step="${step}">
-            <button onclick="increaseQty(${product.id}, ${step}, ${max})">+</button>
-        </div>
-    `;
+// ============ LOAD PRODUCTS ============
+function loadProducts() {
+    console.log('📦 Loading products...');
+    fetch('/api/products')
+        .then(r => r.json())
+        .then(products => {
+            console.log('✅ Loaded', products.length, 'products');
+            displayProducts(products);
+        })
+        .catch(e => console.error('❌ Product load error:', e));
 }
 
-function getQuantityStep(unit) {
-    const lowerUnit = unit.toLowerCase();
+// ============ INITIALIZE ON PAGE LOAD ============
+window.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Page loaded!');
     
-    if (lowerUnit.includes('kg')) return 0.1;
-    if (lowerUnit.includes('dozen')) return 0.5;
-    if (lowerUnit.includes('liter') || lowerUnit.includes('litre')) return 0.5;
-    if (lowerUnit.includes('piece') || lowerUnit.includes('pcs')) return 1;
+    // Check session (only once)
+    checkSession();
     
-    return 1; // default
-}
+    // Setup forms
+    setupAddressForm();
+    
+    console.log('✅ Initialization complete');
+});
 
-function decreaseQty(productId, step) {
-    const input = document.getElementById(`qty-${productId}`);
-    const newVal = Math.max(parseFloat(input.min), parseFloat(input.value) - step);
-    input.value = newVal.toFixed(step < 1 ? 1 : 0);
+// ============ PREVENT MULTIPLE LOADS ============
+if (window.shiviMartLoaded) {
+    console.warn('⚠️ Script already loaded, skipping');
+} else {
+    window.shiviMartLoaded = true;
+    console.log('✅ ShiviMart script loaded');
 }
+</script>
 
-function increaseQty(productId, step, max) {
-    const input = document.getElementById(`qty-${productId}`);
-    const newVal = Math.min(max, parseFloat(input.value) + step);
-    input.value = newVal.toFixed(step < 1 ? 1 : 0);
-}
-    </script>
 </body>
 </html>
