@@ -323,35 +323,39 @@
 
 // ============ UTILITY FUNCTIONS ============
 function showScreen(screenId) {
-    console.log('📍 Switching to:', screenId);
+    console.log('📍 Showing:', screenId);
     document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
     const target = document.getElementById(screenId);
     if (target) {
         target.style.display = 'block';
-        console.log('✅ Now showing:', screenId);
-    } else {
-        console.error('❌ Screen not found:', screenId);
+        console.log('✅ Screen shown:', screenId);
     }
 }
 
-function switchPage(pageName) {
-    console.log('📄 Switching page:', pageName);
-    document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
-    const page = document.getElementById('page-' + pageName);
-    if (page) page.style.display = 'block';
+// function switchPage(pageName) {
+//     console.log('📄 Switching page:', pageName);
+//     document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+//     const page = document.getElementById('page-' + pageName);
+//     if (page) page.style.display = 'block';
     
-    // Update nav
+//     // Update nav
+//     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+//     const navBtn = document.getElementById('nav-' + pageName);
+//     if (navBtn) navBtn.classList.add('active');
+// }
+function switchPage(pageName) {
+    document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+    document.getElementById('page-' + pageName).style.display = 'block';
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    const navBtn = document.getElementById('nav-' + pageName);
-    if (navBtn) navBtn.classList.add('active');
+    document.getElementById('nav-' + pageName).classList.add('active');
 }
+
 
 // ============ SESSION CHECK - RUN ONCE ============
 let sessionChecked = false;
 
 function checkSession() {
     if (sessionChecked) return;
-    sessionChecked = true;
     
     console.log('🔍 Checking session...');
     
@@ -361,10 +365,12 @@ function checkSession() {
         
         if (sessionStr) {
             const session = JSON.parse(sessionStr);
-            console.log('Session:', session);
+            console.log('Session data:', session);
             
-            if (session.isLoggedIn === 'true' || session.isLoggedIn === true) {
-                console.log('✅ Logged in:', session.mobile);
+            // Check if user is logged in
+            if (session.isLoggedIn === 'true' || session.userId) {
+                sessionChecked = true;
+                console.log('✅ User logged in:', session.mobile || session.userId);
                 
                 if (addressStr) {
                     console.log('✅ Has address → Main screen');
@@ -378,14 +384,24 @@ function checkSession() {
             }
         }
         
-        console.log('ℹ️ No session → Login');
-        showScreen('login-screen');
+        // If no session after a delay, show login
+        if (!sessionChecked) {
+            console.log('ℹ️ No session yet, checking again...');
+            setTimeout(checkSession, 500); // Check again in 500ms
+        }
         
     } catch (e) {
         console.error('Session error:', e);
-        showScreen('login-screen');
     }
 }
+// ============ LISTEN FOR SESSION CHANGES ============
+window.addEventListener('storage', function(e) {
+    if (e.key === 'session' && e.newValue) {
+        console.log('🔔 Session updated!');
+        sessionChecked = false;
+        checkSession();
+    }
+});
 
 // ============ ADDRESS FORM HANDLER ============
 function setupAddressForm() {
@@ -419,11 +435,10 @@ function setupAddressForm() {
         };
         
         localStorage.setItem('address', JSON.stringify(address));
-        console.log('✅ Address saved!');
+        console.log('✅ Address saved!', address);
         
         // Go to main screen
         showScreen('main-screen');
-        if (window.loadProducts) loadProducts();
         
         return false;
     };
@@ -431,13 +446,48 @@ function setupAddressForm() {
     console.log('✅ Address form ready');
 }
 
+// ============ WAIT FOR SESSION (app.js saves it) ============
+let checkCount = 0;
+function waitForSession() {
+    const session = localStorage.getItem('session');
+    
+    if (session) {
+        try {
+            const sessionData = JSON.parse(session);
+            if (sessionData.userId || sessionData.mobile) {
+                console.log('✅ Session found!', sessionData.mobile);
+                
+                const address = localStorage.getItem('address');
+                if (address) {
+                    console.log('✅ Has address → Main screen');
+                    showScreen('main-screen');
+                } else {
+                    console.log('⚠️ No address → Address form');
+                    showScreen('address-screen');
+                }
+                return;
+            }
+        } catch (e) {
+            console.error('Session parse error:', e);
+        }
+    }
+    
+    checkCount++;
+    if (checkCount < 10) {
+        console.log('⏳ Waiting for session...', checkCount);
+        setTimeout(waitForSession, 300);
+    } else {
+        console.log('⏱️ Timeout - app.js will handle login');
+        // Let app.js show login screen
+    }
+}
+
+
+// ============ PRODUCT DISPLAY ============
 // ============ PRODUCT DISPLAY ============
 function displayProducts(products) {
     const container = document.getElementById('products-container');
-    if (!container) {
-        console.warn('Products container not found');
-        return;
-    }
+    if (!container) return;
     
     container.innerHTML = products.map(product => {
         const outOfStock = product.stock_quantity <= 0;
@@ -449,17 +499,15 @@ function displayProducts(products) {
         
         const button = outOfStock
             ? '<button disabled style="background:#ccc;">Out of Stock</button>'
-            : `<button onclick="addToCart(${product.id})">Add to Cart</button>`;
+            : `<button onclick="addToCart(${product.id})">Add</button>`;
         
         return `
             <div class="product-card ${outOfStock ? 'out-of-stock' : ''}">
                 ${badge}
-                <img src="${product.image_url || '/images/placeholder.jpg'}" 
-                     alt="${product.name}">
+                <img src="${product.image_url || '/images/placeholder.jpg'}" alt="${product.name}">
                 <h3>${product.name}</h3>
                 <p>${product.category}</p>
                 <div class="price">₹${product.price} / ${product.unit}</div>
-                <p class="stock">Stock: ${product.stock_quantity}</p>
                 ${button}
             </div>
         `;
@@ -475,15 +523,15 @@ function loadProducts() {
             console.log('✅ Loaded', products.length, 'products');
             displayProducts(products);
         })
-        .catch(e => console.error('❌ Product load error:', e));
+        .catch(e => console.error('Product error:', e));
 }
 
-// ============ INITIALIZE ON PAGE LOAD ============
+// ============ PAGE LOAD ============
 window.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 Page loaded!');
+    console.log('📄 Page loaded!');
     
-    // Check session (only once)
-    checkSession();
+    // Wait for app.js to save session
+    setTimeout(waitForSession, 200);
     
     // Setup forms
     setupAddressForm();
@@ -491,6 +539,7 @@ window.addEventListener('DOMContentLoaded', function() {
     console.log('✅ Initialization complete');
 });
 
+console.log('✅ Script loaded');
 // ============ PREVENT MULTIPLE LOADS ============
 if (window.shiviMartLoaded) {
     console.warn('⚠️ Script already loaded, skipping');
