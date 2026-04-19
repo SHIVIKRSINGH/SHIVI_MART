@@ -384,6 +384,39 @@ const SessionManager = {
     }
 };
 
+// ============ SCREEN NAVIGATION ============
+function showScreen(screenId) {
+    console.log('📍 Showing screen:', screenId);
+    
+    // Hide all screens
+    document.querySelectorAll('.screen').forEach(screen => {
+        screen.style.display = 'none';
+    });
+    
+    // Show the requested screen
+    const targetScreen = document.getElementById(screenId);
+    if (targetScreen) {
+        targetScreen.style.display = 'block';
+        console.log('✅ Screen shown:', screenId);
+    } else {
+        console.error('❌ Screen not found:', screenId);
+    }
+}
+// ============ LOAD PRODUCTS FUNCTION ============
+function loadProducts() {
+    console.log('📦 Loading products...');
+    
+    fetch('/api/products')
+        .then(res => res.json())
+        .then(products => {
+            console.log('✅ Products loaded:', products.length);
+            displayProducts(products);
+        })
+        .catch(err => {
+            console.error('❌ Error loading products:', err);
+        });
+}
+
 // Auto-restore session on page load (FIXED)
 window.addEventListener('DOMContentLoaded', function() {
     console.log('🔍 Checking session...');
@@ -415,6 +448,8 @@ window.addEventListener('DOMContentLoaded', function() {
     console.log('ℹ️ No valid session, showing login');
     showScreen('login-screen');
 });
+
+
 // ============ BOTTOM NAVIGATION ============
 function setupNavigation() {
     const navItems = {
