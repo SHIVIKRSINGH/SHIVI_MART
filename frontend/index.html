@@ -547,8 +547,82 @@ window.addEventListener('DOMContentLoaded', function() {
     console.log('✅ Navigation ready');
 });
 
+// Override the Continue Shopping button directly
+setTimeout(function() {
+    const button = document.querySelector('button[type="submit"]');
+    if (button) {
+        button.onclick = function(e) {
+            e.preventDefault();
+            
+            console.log('🔘 Continue Shopping clicked!');
+            
+            // Get values
+            const society = document.querySelector('select').value;
+            const flat = document.querySelectorAll('input')[1].value;
+            
+            if (!society || society.includes('Choose')) {
+                alert('Please select society');
+                return;
+            }
+            if (!flat) {
+                alert('Please enter flat number');
+                return;
+            }
+            
+            // Save address
+            const session = JSON.parse(localStorage.getItem('session'));
+            localStorage.setItem('address', JSON.stringify({
+                user_id: session.userId,
+                society_id: society,
+                tower: document.querySelectorAll('input')[0].value,
+                flat: flat,
+                landmark: document.querySelectorAll('input')[2].value
+            }));
+            
+            console.log('✅ Saved! Going to products...');
+            
+            // Go to products
+            document.getElementById('address-screen').style.display = 'none';
+            document.getElementById('products-screen').style.display = 'block';
+            
+            if (window.loadProducts) loadProducts();
+        };
+        console.log('✅ Button override ready!');
+    }
+}, 500);
+
 // Call this after DOM loads
 window.addEventListener('DOMContentLoaded', setupNavigation);
+
+function setupNavigation() {
+    console.log('Setting up navigation...');
+    
+    const navItems = document.querySelectorAll('.nav-item');
+    navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Get target screen from data attribute or ID
+            const target = this.getAttribute('data-screen') || 
+                          this.id.replace('nav-', '') + '-screen';
+            
+            console.log('Nav clicked:', target);
+            
+            // Remove active from all
+            navItems.forEach(n => n.classList.remove('active'));
+            
+            // Add active to this
+            this.classList.add('active');
+            
+            // Show screen
+            if (typeof showScreen === 'function') {
+                showScreen(target);
+            }
+        });
+    });
+    
+    console.log('✅ Navigation setup complete');
+}
 
 // ============ PRODUCT DISPLAY WITH STOCK BADGES ============
 function displayProducts(products) {
