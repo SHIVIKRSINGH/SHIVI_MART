@@ -791,10 +791,15 @@ document.getElementById('otp-form').addEventListener('submit', async (e) => {
         
         saveSession(result.user);
         
-        if (result.user.default_society_id && result.user.default_address) {
+        // Check if user has saved address in localStorage
+        const savedAddress = localStorage.getItem('address');
+        
+        if (savedAddress) {
+            // User has address, go to main screen
             showScreen('main-screen');
             loadProducts();
         } else {
+            // User needs to add address
             await loadSocieties();
             showScreen('address-screen');
         }
@@ -1145,25 +1150,54 @@ async function loadOrders() {
 // ============ PROFILE ============
 async function loadProfile() {
     const session = loadSession();
-    if (!session) return;
-    
-    try {
-        const user = await apiCall(`/users/${session.userId}`);
+    if (!session) {
         const container = document.getElementById('profile-content');
-        
-        container.innerHTML = `
-            <div style="background: white; padding: 30px; border-radius: 12px;">
-                <h3>Personal Info</h3>
-                <p>Mobile: ${session.mobile}</p>
-                <p>User ID: ${session.userId}</p>
-                <button onclick="logout()" style="margin-top: 20px; padding: 12px 24px; background: #ef4444; color: white; border: none; border-radius: 8px; cursor: pointer;">
-                    Logout
-                </button>
-            </div>
-        `;
-    } catch (error) {
-        console.error('Failed to load profile:', error);
+        container.innerHTML = '<div class="empty-state"><p>Please login first</p></div>';
+        return;
     }
+    
+    const container = document.getElementById('profile-content');
+    const savedAddress = localStorage.getItem('address');
+    let addressInfo = 'Not set';
+    
+    if (savedAddress) {
+        try {
+            const addr = JSON.parse(savedAddress);
+            addressInfo = `Flat ${addr.flat}${addr.tower ? ', Tower ' + addr.tower : ''}`;
+        } catch (e) {}
+    }
+    
+    container.innerHTML = `
+        <div style="background: white; padding: 30px; border-radius: 12px; max-width: 500px; margin: 0 auto;">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #10b981, #059669); border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-size: 36px;">
+                    👤
+                </div>
+                <h2 style="margin: 0;">User Profile</h2>
+            </div>
+            
+            <div style="margin: 20px 0;">
+                <div style="padding: 15px; background: #f9fafb; border-radius: 8px; margin-bottom: 12px;">
+                    <p style="margin: 0; color: #666; font-size: 12px; margin-bottom: 4px;">Mobile Number</p>
+                    <p style="margin: 0; font-size: 16px; font-weight: 600;">📱 ${session.mobile}</p>
+                </div>
+                
+                <div style="padding: 15px; background: #f9fafb; border-radius: 8px; margin-bottom: 12px;">
+                    <p style="margin: 0; color: #666; font-size: 12px; margin-bottom: 4px;">User ID</p>
+                    <p style="margin: 0; font-size: 16px; font-weight: 600;">#${session.userId}</p>
+                </div>
+                
+                <div style="padding: 15px; background: #f9fafb; border-radius: 8px; margin-bottom: 12px;">
+                    <p style="margin: 0; color: #666; font-size: 12px; margin-bottom: 4px;">Delivery Address</p>
+                    <p style="margin: 0; font-size: 16px; font-weight: 600;">🏠 ${addressInfo}</p>
+                </div>
+            </div>
+            
+            <button onclick="logout()" style="width: 100%; padding: 15px; background: #ef4444; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 20px;">
+                🚪 Logout
+            </button>
+        </div>
+    `;
 }
 
 function logout() {
@@ -1194,18 +1228,17 @@ async function init() {
     const session = loadSession();
     
     if (session && session.userId) {
-        try {
-            const user = await apiCall(`/users/${session.userId}`);
-            
-            if (user.default_society_id && user.default_address) {
-                showScreen('main-screen');
-                loadProducts();
-            } else {
-                await loadSocieties();
-                showScreen('address-screen');
-            }
-        } catch (error) {
-            showScreen('login-screen');
+        // Check if user has saved address in localStorage
+        const savedAddress = localStorage.getItem('address');
+        
+        if (savedAddress) {
+            // User has address, go to main screen
+            showScreen('main-screen');
+            loadProducts();
+        } else {
+            // User needs to add address
+            await loadSocieties();
+            showScreen('address-screen');
         }
     } else {
         showScreen('login-screen');
