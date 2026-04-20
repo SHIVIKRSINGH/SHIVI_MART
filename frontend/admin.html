@@ -474,6 +474,40 @@
             font-size: 16px;
         }
 
+        .image-preview-card {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid #e2e8f0;
+        }
+
+        .image-preview-card img {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+        }
+
+        .image-preview-card .remove-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .image-preview-card .remove-btn:hover {
+            background: #dc2626;
+        }
+
         @media (max-width: 768px) {
             .sidebar {
                 width: 0;
@@ -654,6 +688,25 @@
                         <input type="number" id="product-stock" required>
                     </div>
                     <div class="form-group">
+                        <label>Product Images</label>
+                        <div style="margin-bottom: 12px;">
+                            <label style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer; padding: 10px 16px; background: #10b981; color: white; border-radius: 8px; font-size: 14px;">
+                                📁 Upload Images (Max 5)
+                                <input type="file" id="product-images" accept="image/*" multiple style="display:none;" onchange="handleImageUpload(event)">
+                            </label>
+                            <small style="display: block; margin-top: 8px; color: #6b7280;">Max 5 images, 5MB each</small>
+                        </div>
+                        <div style="margin-bottom: 12px;">
+                            <label style="font-size: 14px; margin-bottom: 8px; display: block;">Or Add Image URL</label>
+                            <div style="display: flex; gap: 8px;">
+                                <input type="text" id="image-url-input" placeholder="https://example.com/image.jpg" style="flex: 1;">
+                                <button type="button" class="btn btn-sm" onclick="addImageUrl()" style="background: #10b981; color: white;">Add URL</button>
+                            </div>
+                        </div>
+                        <div id="image-preview-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px; margin-top: 12px;"></div>
+                        <input type="hidden" id="product-image-data">
+                    </div>
+                    <div class="form-group">
                         <label>
                             <input type="checkbox" id="product-available" checked> Available for Sale
                         </label>
@@ -774,6 +827,7 @@
         let ADMIN_KEY = '';
         let allProducts = [];
         let allCategories = [];
+        let productImages = []; // Store multiple images
 
         // Login
         document.getElementById('login-form').addEventListener('submit', async (e) => {
@@ -922,6 +976,7 @@
             document.getElementById('product-form').reset();
             document.getElementById('product-id').value = '';
             document.getElementById('product-available').checked = true;
+            clearImages(); // Clear any existing images
             await loadCategoryDropdown();
             openModal('product-modal');
         }
@@ -938,6 +993,17 @@
             document.getElementById('product-available').checked = product.is_available;
             document.getElementById('product-featured').checked = product.is_featured;
             
+            // Load existing images
+            clearImages();
+            if (product.image_url) {
+                productImages.push({
+                    type: 'url',
+                    data: product.image_url,
+                    name: 'Existing Image'
+                });
+                updateImagePreviews();
+            }
+            
             // Load categories first, then set the value
             await loadCategoryDropdown();
             document.getElementById('product-category').value = product.category_id;
@@ -949,6 +1015,11 @@
             e.preventDefault();
             
             const productId = document.getElementById('product-id').value;
+            
+            // Get the first image (for now, backend might support only one)
+            // If backend supports multiple, send productImages array
+            const imageUrl = productImages.length > 0 ? productImages[0].data : '';
+            
             const productData = {
                 category_id: parseInt(document.getElementById('product-category').value),
                 name: document.getElementById('product-name').value,
@@ -958,7 +1029,8 @@
                 discount_percentage: parseFloat(document.getElementById('product-discount').value),
                 stock_quantity: parseInt(document.getElementById('product-stock').value),
                 is_available: document.getElementById('product-available').checked,
-                is_featured: document.getElementById('product-featured').checked
+                is_featured: document.getElementById('product-featured').checked,
+                image_url: imageUrl
             };
             
             try {
@@ -976,14 +1048,16 @@
                 
                 if (response.ok) {
                     closeModal('product-modal');
+                    clearImages();
                     loadProducts();
                     loadStats();
                     alert(productId ? '✅ Product updated successfully!' : '✅ Product added successfully!');
                 } else {
-                    alert('❌ Error saving product');
+                    const error = await response.json();
+                    alert('❌ Error: ' + (error.message || 'Failed to save product'));
                 }
             } catch (error) {
-                alert('❌ Connection error');
+                alert('❌ Connection error: ' + error.message);
             }
         });
 
@@ -1336,6 +1410,93 @@
 
         // Auto-refresh stats every 30 seconds
         setInterval(loadStats, 30000);
+
+        // ============ IMAGE UPLOAD FUNCTIONS ============
+        function handleImageUpload(event) {
+            const files = event.target.files;
+            
+            if (files.length + productImages.length > 5) {
+                alert('⚠️ Maximum 5 images allowed!');
+                return;
+            }
+            
+            Array.from(files).forEach(file => {
+                if (file.size > 5 * 1024 * 1024) {
+                    alert(`⚠️ ${file.name} is too large (max 5MB)`);
+                    return;
+                }
+                
+                if (!file.type.startsWith('image/')) {
+                    alert(`⚠️ ${file.name} is not an image`);
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    productImages.push({
+                        type: 'base64',
+                        data: e.target.result,
+                        name: file.name
+                    });
+                    updateImagePreviews();
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function addImageUrl() {
+            const url = document.getElementById('image-url-input').value.trim();
+            
+            if (!url) {
+                alert('⚠️ Please enter an image URL');
+                return;
+            }
+            
+            if (productImages.length >= 5) {
+                alert('⚠️ Maximum 5 images allowed!');
+                return;
+            }
+            
+            if (!url.match(/\.(jpg|jpeg|png|gif|webp)$/i) && !url.startsWith('http')) {
+                alert('⚠️ Please enter a valid image URL');
+                return;
+            }
+            
+            productImages.push({
+                type: 'url',
+                data: url,
+                name: 'Image URL'
+            });
+            
+            document.getElementById('image-url-input').value = '';
+            updateImagePreviews();
+        }
+
+        function updateImagePreviews() {
+            const container = document.getElementById('image-preview-container');
+            
+            container.innerHTML = productImages.map((img, index) => `
+                <div class="image-preview-card">
+                    <img src="${img.data}" alt="Product ${index + 1}">
+                    <button class="remove-btn" onclick="removeImage(${index})" type="button">&times;</button>
+                </div>
+            `).join('');
+            
+            // Store in hidden input
+            document.getElementById('product-image-data').value = JSON.stringify(productImages);
+        }
+
+        function removeImage(index) {
+            productImages.splice(index, 1);
+            updateImagePreviews();
+        }
+
+        function clearImages() {
+            productImages = [];
+            updateImagePreviews();
+            document.getElementById('product-images').value = '';
+            document.getElementById('image-url-input').value = '';
+        }
     </script>
 </body>
 </html>
