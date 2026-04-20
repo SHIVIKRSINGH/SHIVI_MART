@@ -5,44 +5,634 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ShiviMart - Fresh Groceries</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/css/styles.css">
+    
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #10b981;
+            --primary-dark: #059669;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --dark: #1f2937;
+            --light: #f3f4f6;
+            --border: #e5e7eb;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--light);
+            color: var(--dark);
+            line-height: 1.6;
+        }
+
+        /* Loading Screen */
+        .loading-screen {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            z-index: 9999;
+        }
+
+        .loader {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .screen {
+            min-height: 100vh;
+            display: none;
+        }
+
+        /* Login Screens */
+        .login-container {
+            max-width: 400px;
+            margin: 80px auto;
+            padding: 40px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo h1 {
+            font-size: 28px;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .logo h2 {
+            font-size: 22px;
+            color: var(--dark);
+            margin-bottom: 8px;
+        }
+
+        .logo p {
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--dark);
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 16px;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-primary:disabled {
+            background: #d1d5db;
+            cursor: not-allowed;
+        }
+
+        .btn-block {
+            width: 100%;
+            display: block;
+        }
+
+        .btn-link {
+            background: transparent;
+            color: var(--primary);
+            text-decoration: underline;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            color: var(--primary);
+        }
+
+        .cart-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        #cart-count {
+            background: var(--danger);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 13px;
+            margin-left: 5px;
+        }
+
+        /* Categories */
+        .categories {
+            background: white;
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+
+        .categories::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .categories::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        .category-btn {
+            display: inline-block;
+            padding: 8px 16px;
+            margin-right: 10px;
+            background: var(--light);
+            border: 2px solid transparent;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .category-btn:hover {
+            background: #e5e7eb;
+        }
+
+        .category-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* Products */
+        .products-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .products-header h2 {
+            font-size: 24px;
+        }
+
+        #search-input {
+            flex: 1;
+            min-width: 200px;
+            max-width: 300px;
+            padding: 10px 16px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 15px;
+        }
+
+        #search-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            padding-bottom: 100px;
+        }
+
+        .product-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            position: relative;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .product-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .product-card img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+        }
+
+        .product-card h3 {
+            padding: 12px 12px 4px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .product-card p {
+            padding: 0 12px;
+            font-size: 13px;
+            color: #6b7280;
+            margin-bottom: 8px;
+        }
+
+        .product-card .price {
+            padding: 0 12px;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .product-card button {
+            width: calc(100% - 24px);
+            margin: 0 12px 12px;
+            padding: 10px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .product-card button:hover {
+            background: var(--primary-dark);
+        }
+
+        .product-card button:disabled {
+            background: #d1d5db;
+            cursor: not-allowed;
+        }
+
         .stock-badge {
             position: absolute;
             top: 10px;
             right: 10px;
             padding: 5px 10px;
-            border-radius: 4px;
+            border-radius: 6px;
             font-size: 11px;
             font-weight: bold;
             z-index: 10;
         }
-        .stock-badge.sold-out { background: #ff4444; color: white; }
-        .stock-badge.low-stock { background: #ff9800; color: white; }
-        .product-card.out-of-stock { opacity: 0.6; }
-        .product-card.out-of-stock img { filter: grayscale(100%); }
-        
+
+        .stock-badge.sold-out {
+            background: var(--danger);
+            color: white;
+        }
+
+        .stock-badge.low-stock {
+            background: var(--warning);
+            color: white;
+        }
+
+        .product-card.out-of-stock {
+            opacity: 0.6;
+        }
+
+        .product-card.out-of-stock img {
+            filter: grayscale(100%);
+        }
+
         .quantity-selector {
             display: flex;
             align-items: center;
-            gap: 10px;
+            justify-content: center;
+            gap: 12px;
             margin: 0 12px 12px;
         }
+
         .quantity-selector button {
-            width: 32px;
-            height: 32px;
+            width: 36px;
+            height: 36px;
             margin: 0;
             padding: 0;
-            background: #10b981;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: bold;
         }
+
         .quantity-selector span {
             font-weight: 600;
+            font-size: 16px;
             min-width: 30px;
             text-align: center;
+        }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0;
+            z-index: 100;
+            box-shadow: 0 -2px 4px rgba(0,0,0,0.05);
+        }
+
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            color: #6b7280;
+            transition: color 0.3s;
+        }
+
+        .nav-item:hover {
+            color: var(--primary);
+        }
+
+        .nav-item.active {
+            color: var(--primary);
+        }
+
+        .nav-icon {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+
+        .nav-label {
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .page {
+            min-height: calc(100vh - 120px);
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            overflow-y: auto;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            margin: 20px;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-header h2 {
+            font-size: 20px;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #6b7280;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-btn:hover {
+            color: var(--dark);
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .cart-item {
+            display: flex;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+            align-items: center;
+        }
+
+        .cart-item:last-child {
+            border-bottom: none;
+        }
+
+        .cart-item img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .cart-item-details {
+            flex: 1;
+        }
+
+        .cart-item-details h4 {
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .cart-item-details p {
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .cart-summary {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid var(--border);
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            font-size: 15px;
+        }
+
+        .summary-row.total {
+            font-size: 18px;
+            font-weight: 700;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6b7280;
+        }
+
+        .empty-state p {
+            font-size: 16px;
+        }
+
+        /* Toast */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+        }
+
+        .toast {
+            background: white;
+            padding: 16px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            margin-bottom: 10px;
+            min-width: 250px;
+            animation: slideIn 0.3s ease;
+            border-left: 4px solid var(--primary);
+        }
+
+        .toast.error {
+            border-left-color: var(--danger);
+        }
+
+        .toast.success {
+            border-left-color: var(--primary);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .products-grid {
+                grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+                gap: 15px;
+            }
+
+            .product-card img {
+                height: 140px;
+            }
         }
     </style>
 </head>
@@ -53,7 +643,7 @@
             <p>Loading ShiviMart...</p>
         </div>
 
-        <div id="login-screen" class="screen" style="display:none;">
+        <div id="login-screen" class="screen">
             <div class="login-container">
                 <div class="logo">
                     <h1>🛒 ShiviMart</h1>
@@ -69,7 +659,7 @@
             </div>
         </div>
 
-        <div id="otp-screen" class="screen" style="display:none;">
+        <div id="otp-screen" class="screen">
             <div class="login-container">
                 <div class="logo">
                     <h2>Verify OTP</h2>
@@ -86,9 +676,9 @@
             </div>
         </div>
 
-        <div id="address-screen" class="screen" style="display:none;">
+        <div id="address-screen" class="screen">
             <div class="container">
-                <h2>Delivery Address</h2>
+                <h2 style="margin-bottom: 20px;">Delivery Address</h2>
                 <form id="address-form">
                     <div class="form-group">
                         <label>Society</label>
@@ -113,7 +703,7 @@
             </div>
         </div>
 
-        <div id="main-screen" class="screen" style="display:none;">
+        <div id="main-screen" class="screen">
             <header class="header">
                 <div class="header-content">
                     <h1>🛒 ShiviMart</h1>
@@ -127,20 +717,20 @@
                     <div class="container">
                         <div class="products-header">
                             <h2 id="products-title">All Products</h2>
-                            <input type="search" id="search-input" placeholder="Search...">
+                            <input type="search" id="search-input" placeholder="Search products...">
                         </div>
                         <div class="products-grid" id="products-container"></div>
                     </div>
                 </div>
 
-                <div id="page-orders" class="page" style="display:none;">
+                <div id="page-orders" class="page">
                     <div class="container">
                         <h2 style="margin: 20px 0;">My Orders</h2>
                         <div id="orders-list"></div>
                     </div>
                 </div>
 
-                <div id="page-profile" class="page" style="display:none;">
+                <div id="page-profile" class="page">
                     <div class="container">
                         <h2 style="margin: 20px 0;">My Profile</h2>
                         <div id="profile-content"></div>
@@ -193,10 +783,6 @@
     <div id="toast-container"></div>
 
     <script>
-// ============================================
-// COMPLETE SHIVIMART APPLICATION
-// ============================================
-
 const API_URL = window.location.origin + '/api';
 let currentMobile = '';
 let authToken = '';
@@ -204,7 +790,6 @@ let userId = '';
 let allProducts = [];
 let cartItems = [];
 
-// ============ UTILITIES ============
 function showToast(msg, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
@@ -221,8 +806,8 @@ function showScreen(id) {
 }
 
 function switchPage(page) {
-    document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
-    document.getElementById('page-' + page).style.display = 'block';
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-' + page).classList.add('active');
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     document.getElementById('nav-' + page).classList.add('active');
     
@@ -238,7 +823,6 @@ function closeModal(id) {
     document.getElementById(id).classList.remove('active');
 }
 
-// ============ API CALLS ============
 async function apiCall(endpoint, method = 'GET', data = null) {
     const headers = { 'Content-Type': 'application/json' };
     if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
@@ -253,7 +837,6 @@ async function apiCall(endpoint, method = 'GET', data = null) {
     return json;
 }
 
-// ============ LOGIN ============
 document.getElementById('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const mobile = document.getElementById('mobile-input').value.trim();
@@ -264,17 +847,17 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
     }
     
     try {
-        await apiCall('/auth/send-otp', 'POST', { mobile });
+        const response = await apiCall('/auth/send-otp', 'POST', { mobile });
         currentMobile = mobile;
         document.getElementById('mobile-display').textContent = mobile;
         showScreen('otp-screen');
         showToast('OTP sent!', 'success');
+        if (response.dev_otp) console.log('🔐 OTP:', response.dev_otp);
     } catch (err) {
         showToast(err.message, 'error');
     }
 });
 
-// ============ OTP VERIFY ============
 document.getElementById('otp-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const otp = document.getElementById('otp-input').value.trim();
@@ -287,7 +870,7 @@ document.getElementById('otp-form').addEventListener('submit', async (e) => {
         localStorage.setItem('auth_token', res.token);
         localStorage.setItem('user_id', res.user.id);
         
-        console.log('✅ Token saved:', authToken);
+        console.log('✅ Token saved');
         
         try {
             const addr = await apiCall('/societies/my-addresses');
@@ -314,11 +897,10 @@ document.getElementById('resend-otp').addEventListener('click', async () => {
         await apiCall('/auth/send-otp', 'POST', { mobile: currentMobile });
         showToast('OTP resent!', 'success');
     } catch (err) {
-        showToast('Failed to resend', 'error');
+        showToast('Failed', 'error');
     }
 });
 
-// ============ SOCIETIES ============
 async function loadSocieties() {
     try {
         const data = await apiCall('/societies');
@@ -332,7 +914,6 @@ async function loadSocieties() {
     }
 }
 
-// ============ ADDRESS SAVE ============
 document.getElementById('address-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     
@@ -354,11 +935,11 @@ document.getElementById('address-form').addEventListener('submit', async (e) => 
     }
 });
 
-// ============ PRODUCTS ============
 async function loadProducts() {
     try {
         const data = await apiCall('/products');
         allProducts = data.products || data || [];
+        console.log('✅ Products loaded:', allProducts.length);
         displayProducts(allProducts);
         loadCategories();
     } catch (err) {
@@ -367,12 +948,11 @@ async function loadProducts() {
 }
 
 function loadCategories() {
-    const categories = ['All', ...new Set(allProducts.map(p => p.category))];
+    const categories = [...new Set(allProducts.map(p => p.category).filter(c => c))];
     const container = document.getElementById('categories-container');
     
-    container.innerHTML = categories.map((cat, i) => 
-        `<button class="category-btn ${i === 0 ? 'active' : ''}" onclick="filterByCategory('${cat}')">${cat}</button>`
-    ).join('');
+    container.innerHTML = '<button class="category-btn active" onclick="filterByCategory(\'All\')">All</button>' +
+        categories.map(cat => `<button class="category-btn" onclick="filterByCategory('${cat}')">${cat}</button>`).join('');
 }
 
 function filterByCategory(cat) {
@@ -386,6 +966,11 @@ function filterByCategory(cat) {
 
 function displayProducts(products) {
     const container = document.getElementById('products-container');
+    
+    if (products.length === 0) {
+        container.innerHTML = '<div class="empty-state"><p>No products found</p></div>';
+        return;
+    }
     
     container.innerHTML = products.map(p => {
         const outOfStock = p.stock_quantity <= 0;
@@ -417,7 +1002,7 @@ function displayProducts(products) {
                 ${badge}
                 <img src="${p.image_url || '/images/placeholder.png'}" alt="${p.name}">
                 <h3>${p.name}</h3>
-                <p>${p.category}</p>
+                <p>${p.category || 'Uncategorized'}</p>
                 <div class="price">₹${p.price} / ${p.unit}</div>
                 ${button}
             </div>
@@ -425,7 +1010,6 @@ function displayProducts(products) {
     }).join('');
 }
 
-// ============ CART ============
 function addToCart(id) {
     const product = allProducts.find(p => p.id === id);
     if (!product) return;
@@ -474,7 +1058,7 @@ function updateCartUI() {
                     <h4>${item.name}</h4>
                     <p>₹${item.price} × ${item.quantity}</p>
                 </div>
-                <div>₹${item.price * item.quantity}</div>
+                <div style="font-weight: 600;">₹${item.price * item.quantity}</div>
             </div>
         `).join('');
         
@@ -492,7 +1076,6 @@ document.getElementById('cart-btn').addEventListener('click', () => {
     openModal('cart-modal');
 });
 
-// ============ ORDERS ============
 async function loadOrders() {
     const container = document.getElementById('orders-list');
     
@@ -509,7 +1092,7 @@ async function loadOrders() {
             <div style="background: white; padding: 20px; margin-bottom: 15px; border-radius: 12px;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
                     <strong>Order #${o.id}</strong>
-                    <span>${o.status || 'Pending'}</span>
+                    <span style="color: var(--primary);">${o.status || 'Pending'}</span>
                 </div>
                 <p>Date: ${new Date(o.created_at).toLocaleDateString()}</p>
                 <p>Total: ₹${o.total_amount}</p>
@@ -520,18 +1103,15 @@ async function loadOrders() {
     }
 }
 
-// ============ PROFILE ============
-async function loadProfile() {
+function loadProfile() {
     const container = document.getElementById('profile-content');
     
     container.innerHTML = `
         <div style="background: white; padding: 30px; border-radius: 12px;">
-            <h3>Personal Info</h3>
-            <p>Mobile: ${currentMobile || 'Not available'}</p>
-            <p>User ID: ${userId}</p>
-            <button onclick="logout()" style="margin-top: 20px; padding: 12px 24px; background: #ef4444; color: white; border: none; border-radius: 8px; cursor: pointer;">
-                Logout
-            </button>
+            <h3 style="margin-bottom: 15px;">Personal Info</h3>
+            <p style="margin-bottom: 10px;">Mobile: ${currentMobile || 'Not available'}</p>
+            <p style="margin-bottom: 20px;">User ID: ${userId}</p>
+            <button onclick="logout()" class="btn btn-primary">Logout</button>
         </div>
     `;
 }
@@ -543,14 +1123,12 @@ function logout() {
     }
 }
 
-// ============ SEARCH ============
 document.getElementById('search-input').addEventListener('input', (e) => {
     const term = e.target.value.toLowerCase();
     const filtered = allProducts.filter(p => p.name.toLowerCase().includes(term));
     displayProducts(filtered);
 });
 
-// ============ INIT ============
 window.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 ShiviMart starting...');
     
@@ -585,8 +1163,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     
     document.getElementById('loading-screen').style.display = 'none';
 });
-
-console.log('✅ ShiviMart ready');
     </script>
 </body>
 </html>
