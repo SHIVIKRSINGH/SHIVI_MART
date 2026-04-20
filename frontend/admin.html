@@ -700,6 +700,7 @@
     <script>
 const API_URL = window.location.origin + '/api';
 let currentImageBase64 = '';
+let allProducts = [];
 
 function showToast(msg, type = 'success') {
     const toast = document.createElement('div');
@@ -787,10 +788,10 @@ async function loadDashboard() {
 async function loadProducts() {
     try {
         const data = await apiCall('/products');
-        const products = data.products || data || [];
+        allProducts = data.products || data || [];
         
         const tbody = document.getElementById('products-table');
-        tbody.innerHTML = products.map(p => `
+        tbody.innerHTML = allProducts.map(p => `
             <tr>
                 <td><img src="${p.image_url || '/images/placeholder.png'}" class="product-image"></td>
                 <td>${p.name}</td>
@@ -874,6 +875,32 @@ function previewImage(event) {
         preview.style.display = 'block';
     };
     reader.readAsDataURL(file);
+}
+
+function editProduct(id) {
+    const product = allProducts.find(p => p.id === id);
+    if (!product) return;
+    
+    // Populate form
+    document.getElementById('product-name').value = product.name;
+    document.getElementById('product-category').value = product.category || '';
+    document.getElementById('product-price').value = product.price;
+    document.getElementById('product-stock').value = product.stock_quantity;
+    document.getElementById('product-unit').value = product.unit;
+    document.getElementById('product-discount').value = product.discount_percentage || 0;
+    document.getElementById('product-description').value = product.description || '';
+    
+    if (product.image_url) {
+        currentImageBase64 = product.image_url;
+        const preview = document.getElementById('image-preview');
+        preview.src = product.image_url;
+        preview.style.display = 'block';
+    }
+    
+    // Scroll to form
+    document.querySelector('#products .card').scrollIntoView({ behavior: 'smooth' });
+    
+    showToast('Edit mode - Update the product details', 'info');
 }
 
 async function deleteProduct(id) {
