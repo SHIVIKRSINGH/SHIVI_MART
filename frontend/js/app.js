@@ -1,108 +1,6 @@
-// ========================================
-// AUTO-LOGIN ON PAGE LOAD
-// ========================================
-
-// ========================================
-// SMART AUTO-LOGIN WITH ADDRESS CHECK
-// ========================================
-
-window.addEventListener("DOMContentLoaded", async function () {
-  const isLoggedIn = localStorage.getItem("is_logged_in");
-  const userId = localStorage.getItem("user_id");
-  const mobile = localStorage.getItem("mobile");
-
-  console.log("🔍 Checking session:", { isLoggedIn, userId, mobile });
-
-  if (isLoggedIn === "true" && userId && mobile) {
-    console.log("✅ Session found - Checking address...");
-
-    // Restore user data
-    window.currentUser = {
-      id: userId,
-      mobile: mobile,
-      name: localStorage.getItem("user_name") || mobile,
-    };
-
-    // Check if user has saved address
-    const hasAddress = await checkUserHasAddress(userId);
-
-    setTimeout(() => {
-      const loginScreen = document.getElementById("login-screen");
-      const addressScreen = document.getElementById("address-screen");
-      const mainScreen = document.getElementById("main-screen");
-
-      if (loginScreen) loginScreen.style.display = "none";
-
-      if (hasAddress) {
-        // User has address → Go to products
-        console.log("✅ Address found → Main screen");
-        if (addressScreen) addressScreen.style.display = "none";
-        if (mainScreen) mainScreen.style.display = "block";
-      } else {
-        // User needs to add address
-        console.log("⚠️ No address → Address screen");
-        if (mainScreen) mainScreen.style.display = "none";
-        if (addressScreen) addressScreen.style.display = "block";
-      }
-    }, 200);
-  } else {
-    console.log("❌ No session - Show login");
-  }
-});
-
-// Check if user has saved address
-async function checkUserHasAddress(userId) {
-  try {
-    // Check localStorage first (fast)
-    const savedAddress = localStorage.getItem("user_address");
-    const savedSociety = localStorage.getItem("user_society");
-
-    if (savedAddress && savedSociety) {
-      console.log("✅ Address in localStorage");
-      return true;
-    }
-
-    // Check database (via API)
-    const response = await fetch(`${API_URL}/users/${userId}`);
-    const data = await response.json();
-
-    if (data.success && data.user) {
-      const hasAddress = !!(
-        data.user.default_address && data.user.default_society_id
-      );
-
-      if (hasAddress) {
-        // Save to localStorage for faster future checks
-        localStorage.setItem("user_address", data.user.default_address);
-        localStorage.setItem("user_society", data.user.default_society_id);
-        console.log("✅ Address in database");
-      }
-
-      return hasAddress;
-    }
-
-    return false;
-  } catch (error) {
-    console.error("Error checking address:", error);
-    return false; // Show address screen if error
-  }
-}
-
-// Logout function
-function logoutUser() {
-  if (confirm("Are you sure you want to logout?")) {
-    console.log("🚪 Logging out...");
-    localStorage.clear();
-    window.location.reload();
-  }
-}
-
-// ========================================
-// REST OF YOUR CODE BELOW
-// ========================================
-
 // ============================================
-// MAIN APPLICATION
+// FIXED APP.JS - Proper Session & Database Integration
+// Replace your existing app.js with this
 // ============================================
 
 class App {
@@ -115,23 +13,61 @@ class App {
   }
 
   async init() {
-    // Check authentication
-    const token = API.getAuthToken();
-    const savedAddress = Utils.storage.get(CONFIG.STORAGE_KEYS.ADDRESS_DATA);
+    console.log("🚀 Initializing ShiviMart...");
 
-    if (token && savedAddress) {
-      await this.loadMainScreen();
-    } else if (token && !savedAddress) {
-      await this.showAddressScreen();
+    // Check authentication token
+    const token = Utils.storage.get(CONFIG.STORAGE_KEYS.AUTH_TOKEN);
+
+    if (token) {
+      console.log("✅ Token found, checking user session...");
+
+      try {
+        // Fetch user profile from database to check if they have address
+        const profile = await API.auth.getProfile();
+
+        console.log("✅ User profile loaded:", profile);
+
+        // Check if user has addresses in database
+        const addresses = await API.societies.getMyAddresses();
+
+        if (
+          addresses &&
+          addresses.addresses &&
+          addresses.addresses.length > 0
+        ) {
+          console.log("✅ User has saved address in database");
+          // Save to localStorage for quick access
+          Utils.storage.set(
+            CONFIG.STORAGE_KEYS.ADDRESS_DATA,
+            addresses.addresses[0],
+          );
+          await this.loadMainScreen();
+        } else {
+          console.log("⚠️ User needs to add address");
+          await this.showAddressScreen();
+        }
+      } catch (error) {
+        console.error("❌ Session check failed:", error);
+        // Token invalid or expired - show login
+        this.clearSessionAndShowLogin();
+      }
     } else {
+      console.log("ℹ️ No token found, showing login");
       this.showLoginScreen();
     }
 
     this.setupEventListeners();
+
+    // Hide loading screen
+    document.getElementById("loading-screen").style.display = "none";
+  }
+
+  clearSessionAndShowLogin() {
+    Utils.storage.clear();
+    this.showLoginScreen();
   }
 
   showLoginScreen() {
-    document.getElementById("loading-screen").style.display = "none";
     Utils.showScreen("login-screen");
   }
 
@@ -145,21 +81,31 @@ class App {
     }
 
     try {
+      const btn = e.target.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      btn.textContent = "Sending...";
+
       const response = await API.auth.sendOTP(mobile);
       this.currentMobile = mobile;
       document.getElementById("mobile-display").textContent = mobile;
 
       // Show OTP in console for development
       if (response.dev_otp) {
-        console.log("🔐 OTP:", response.dev_otp);
+        console.log("🔐 Development OTP:", response.dev_otp);
         Utils.showToast(`OTP sent! (Check console)`, "success");
       } else {
         Utils.showToast("OTP sent successfully", "success");
       }
 
       Utils.showScreen("otp-screen");
+
+      btn.disabled = false;
+      btn.textContent = "Send OTP";
     } catch (error) {
+      console.error("Login error:", error);
       Utils.showToast(error.message || "Failed to send OTP", "error");
+      e.target.querySelector('button[type="submit"]').disabled = false;
+      e.target.querySelector('button[type="submit"]').textContent = "Send OTP";
     }
   }
 
@@ -173,33 +119,54 @@ class App {
     }
 
     try {
-      // Verify OTP
+      const btn = e.target.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      btn.textContent = "Verifying...";
+
+      // ✅ CRITICAL: This saves the token via API.auth.verifyOTP
       const response = await API.auth.verifyOTP(this.currentMobile, otp);
 
-      // ✅ SAVE SESSION DATA
-      if (response && response.user) {
-        localStorage.setItem("user_id", response.user.id);
-        localStorage.setItem("mobile", response.user.mobile);
-        localStorage.setItem(
-          "user_name",
-          response.user.name || this.currentMobile,
-        );
-        localStorage.setItem("is_logged_in", "true");
-        localStorage.setItem("token", response.token || "logged_in");
-
-        // Save globally
-        window.currentUser = response.user;
-
-        console.log("✅ Session saved:", {
-          user_id: response.user.id,
-          mobile: response.user.mobile,
-        });
-      }
+      console.log("✅ OTP verified successfully");
+      console.log(
+        "✅ Token saved:",
+        Utils.storage.get(CONFIG.STORAGE_KEYS.AUTH_TOKEN),
+      );
+      console.log("✅ User:", response.user);
 
       Utils.showToast("Login successful!", "success");
-      await this.showAddressScreen();
+
+      // Check if user has addresses in database
+      try {
+        const addresses = await API.societies.getMyAddresses();
+
+        if (
+          addresses &&
+          addresses.addresses &&
+          addresses.addresses.length > 0
+        ) {
+          console.log("✅ User has existing address");
+          Utils.storage.set(
+            CONFIG.STORAGE_KEYS.ADDRESS_DATA,
+            addresses.addresses[0],
+          );
+          await this.loadMainScreen();
+        } else {
+          console.log("⚠️ User needs to add address");
+          await this.showAddressScreen();
+        }
+      } catch (error) {
+        console.log("⚠️ No addresses found, showing address form");
+        await this.showAddressScreen();
+      }
+
+      btn.disabled = false;
+      btn.textContent = "Verify & Login";
     } catch (error) {
+      console.error("OTP verification error:", error);
       Utils.showToast(error.message || "Invalid OTP", "error");
+      e.target.querySelector('button[type="submit"]').disabled = false;
+      e.target.querySelector('button[type="submit"]').textContent =
+        "Verify & Login";
     }
   }
 
@@ -211,14 +178,38 @@ class App {
   async loadSocieties() {
     try {
       const response = await API.societies.getAll();
+
+      // Handle different response formats
+      let societies = [];
+      if (Array.isArray(response)) {
+        societies = response;
+      } else if (response.societies && Array.isArray(response.societies)) {
+        societies = response.societies;
+      }
+
       const select = document.getElementById("society-select");
+
+      if (societies.length === 0) {
+        select.innerHTML = '<option value="">No societies available</option>';
+        Utils.showToast(
+          "No societies available. Please contact admin.",
+          "error",
+        );
+        return;
+      }
 
       select.innerHTML =
         '<option value="">Choose your society...</option>' +
-        response.societies
-          .map((s) => `<option value="${s.id}">${s.name} - ${s.area}</option>`)
+        societies
+          .map(
+            (s) =>
+              `<option value="${s.id}">${s.name}${s.area ? " - " + s.area : ""}</option>`,
+          )
           .join("");
+
+      console.log("✅ Societies loaded:", societies.length);
     } catch (error) {
+      console.error("Failed to load societies:", error);
       Utils.showToast("Failed to load societies", "error");
     }
   }
@@ -228,9 +219,9 @@ class App {
 
     const addressData = {
       society_id: parseInt(document.getElementById("society-select").value),
-      tower_no: document.getElementById("tower-input").value.trim(),
+      tower_no: document.getElementById("tower-input").value.trim() || null,
       flat_no: document.getElementById("flat-input").value.trim(),
-      landmark: document.getElementById("landmark-input").value.trim(),
+      landmark: document.getElementById("landmark-input").value.trim() || null,
       is_default: true,
     };
 
@@ -240,22 +231,26 @@ class App {
     }
 
     try {
+      const btn = e.target.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      btn.textContent = "Saving...";
+
+      // ✅ Save to database - API.societies.addAddress uses token automatically
       await API.societies.addAddress(addressData);
 
-      // ✅ SAVE ADDRESS FLAG TO LOCALSTORAGE
-      localStorage.setItem("has_address", "true");
-      localStorage.setItem("user_society", addressData.society_id);
-      localStorage.setItem(
-        "user_address",
-        `${addressData.flat_no}, ${addressData.tower_no}`,
-      );
-
-      console.log("✅ Address saved to localStorage");
+      console.log("✅ Address saved to database");
 
       Utils.showToast("Address saved!", "success");
       await this.loadMainScreen();
+
+      btn.disabled = false;
+      btn.textContent = "Continue Shopping";
     } catch (error) {
+      console.error("Address save error:", error);
       Utils.showToast(error.message || "Failed to save address", "error");
+      e.target.querySelector('button[type="submit"]').disabled = false;
+      e.target.querySelector('button[type="submit"]').textContent =
+        "Continue Shopping";
     }
   }
 
@@ -268,9 +263,10 @@ class App {
   async loadCategories() {
     try {
       const response = await API.categories.getAll();
-      this.categories = response.categories;
+      this.categories = response.categories || [];
       this.renderCategories();
     } catch (error) {
+      console.error("Failed to load categories:", error);
       Utils.showToast("Failed to load categories", "error");
     }
   }
@@ -286,6 +282,18 @@ class App {
               )
               .join("")}
         `;
+
+    // Add click handlers
+    container.querySelectorAll(".category-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        container
+          .querySelectorAll(".category-btn")
+          .forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        const category = btn.dataset.category;
+        this.loadProducts(category);
+      });
+    });
   }
 
   async loadProducts(categorySlug = null) {
@@ -297,9 +305,10 @@ class App {
         response = await API.products.getAll();
       }
 
-      this.products = response.products;
+      this.products = response.products || [];
       this.renderProducts();
     } catch (error) {
+      console.error("Failed to load products:", error);
       Utils.showToast("Failed to load products", "error");
     }
   }
@@ -324,18 +333,30 @@ class App {
       .map((product) => {
         const quantity = cart.getQuantity(product.id);
         const hasDiscount = product.discount_percentage > 0;
+        const outOfStock = product.stock_quantity <= 0;
+        const lowStock =
+          product.stock_quantity > 0 && product.stock_quantity < 10;
+
+        let stockBadge = "";
+        if (outOfStock) {
+          stockBadge = '<div class="stock-badge sold-out">SOLD OUT</div>';
+        } else if (lowStock) {
+          stockBadge = `<div class="stock-badge low-stock">Only ${product.stock_quantity} left</div>`;
+        }
 
         return `
-                <div class="product-card">
+                <div class="product-card ${outOfStock ? "out-of-stock" : ""}">
+                    ${stockBadge}
                     <img 
                         src="${product.image_url || "/images/placeholder.png"}" 
                         alt="${product.name}"
                         class="product-image"
+                        onerror="this.src='/images/placeholder.png'"
                     >
                     <div class="product-info">
                         <div class="product-name">${product.name}</div>
                         <div class="product-price">
-                            <span class="price-current">${Utils.formatPrice(product.discounted_price)}</span>
+                            <span class="price-current">${Utils.formatPrice(product.discounted_price || product.price)}</span>
                             ${
                               hasDiscount
                                 ? `
@@ -353,12 +374,14 @@ class App {
                                 <div class="qty-controls">
                                     <button class="qty-btn" onclick="app.updateCart(${product.id}, -1)">−</button>
                                     <span class="qty-display">${quantity}</span>
-                                    <button class="qty-btn" onclick="app.updateCart(${product.id}, 1)">+</button>
+                                    <button class="qty-btn" onclick="app.updateCart(${product.id}, 1)" 
+                                        ${quantity >= product.stock_quantity ? "disabled" : ""}>+</button>
                                 </div>
                             `
                                 : `
-                                <button class="add-to-cart-btn" onclick="app.addToCart(${product.id})">
-                                    Add to Cart
+                                <button class="add-to-cart-btn" onclick="app.addToCart(${product.id})"
+                                    ${outOfStock ? "disabled" : ""}>
+                                    ${outOfStock ? "Out of Stock" : "Add to Cart"}
                                 </button>
                             `
                             }
@@ -372,9 +395,9 @@ class App {
 
   addToCart(productId) {
     const product = this.products.find((p) => p.id === productId);
-    if (product) {
+    if (product && product.stock_quantity > 0) {
       cart.addItem(product);
-      this.renderProducts(); // Re-render to show quantity controls
+      this.renderProducts();
     }
   }
 
@@ -393,14 +416,12 @@ class App {
     Utils.hideModal("cart-modal");
     Utils.showModal("checkout-modal");
 
-    // Set minimum date to tomorrow
     const dateInput = document.getElementById("delivery-date");
     dateInput.min = Utils.getTomorrowDate();
     dateInput.value = Utils.getTomorrowDate();
 
     await this.loadDeliverySlots(Utils.getTomorrowDate());
 
-    // Update final total
     document.getElementById("final-total").textContent = Utils.formatPrice(
       cart.getTotal(),
     );
@@ -411,7 +432,7 @@ class App {
       const response = await API.slots.getAvailable(date);
       const container = document.getElementById("slots-container");
 
-      if (response.slots.length === 0) {
+      if (!response.slots || response.slots.length === 0) {
         container.innerHTML = "<p>No slots available for this date</p>";
         return;
       }
@@ -431,6 +452,7 @@ class App {
 
       this.selectedSlot = response.slots[0].id;
     } catch (error) {
+      console.error("Failed to load delivery slots:", error);
       Utils.showToast("Failed to load delivery slots", "error");
     }
   }
@@ -455,22 +477,23 @@ class App {
     const paymentMethod = document.querySelector(
       'input[name="payment"]:checked',
     ).value;
-    const addresses = await API.societies.getMyAddresses();
-
-    if (!addresses.addresses || addresses.addresses.length === 0) {
-      Utils.showToast("No delivery address found", "error");
-      return;
-    }
-
-    const orderData = {
-      address_id: addresses.addresses[0].id,
-      delivery_slot_id: this.selectedSlot,
-      delivery_date: deliveryDate,
-      items: cart.getOrderItems(),
-      payment_method: paymentMethod,
-    };
 
     try {
+      const addresses = await API.societies.getMyAddresses();
+
+      if (!addresses.addresses || addresses.addresses.length === 0) {
+        Utils.showToast("No delivery address found", "error");
+        return;
+      }
+
+      const orderData = {
+        address_id: addresses.addresses[0].id,
+        delivery_slot_id: this.selectedSlot,
+        delivery_date: deliveryDate,
+        items: cart.getOrderItems(),
+        payment_method: paymentMethod,
+      };
+
       const response = await API.orders.create(orderData);
 
       Utils.showToast("Order placed successfully! 🎉", "success");
@@ -478,11 +501,11 @@ class App {
       cart.clear();
       this.renderProducts();
 
-      // Show order confirmation
       alert(
         `Order #${response.order.order_number} placed!\nTotal: ${Utils.formatPrice(response.order.total_amount)}`,
       );
     } catch (error) {
+      console.error("Order placement error:", error);
       Utils.showToast(error.message || "Failed to place order", "error");
     }
   }
@@ -541,17 +564,6 @@ class App {
         this.loadDeliverySlots(e.target.value);
       });
 
-    // Category buttons
-    document.addEventListener("click", (e) => {
-      if (e.target.classList.contains("category-btn")) {
-        document
-          .querySelectorAll(".category-btn")
-          .forEach((btn) => btn.classList.remove("active"));
-        e.target.classList.add("active");
-        this.loadProducts(e.target.dataset.category);
-      }
-    });
-
     // Search
     const searchDebounced = Utils.debounce(
       (term) => this.renderProducts(term),
@@ -574,338 +586,16 @@ class App {
 
 // Initialize app when DOM is ready
 document.addEventListener("DOMContentLoaded", () => {
+  console.log("🌟 ShiviMart Starting...");
   window.app = new App();
 });
 
-function getStockBadge(quantity) {
-  if (quantity === 0) {
-    return '<span class="stock-badge sold-out">SOLD OUT</span>';
-  } else if (quantity < 10) {
-    return `<span class="stock-badge low-stock">Only ${quantity} left!</span>`;
-  }
-  return '<span class="stock-badge in-stock">In Stock</span>';
-}
-
-function renderProductCard(product) {
-  // Image URL with fallback
-  const imageUrl =
-    product.image_url || "https://via.placeholder.com/300x200?text=No+Image";
-
-  // Stock status
-  const stock = product.stock_quantity;
-  let stockBadge, isOutOfStock, stockClass;
-
-  if (stock === 0) {
-    stockBadge = '<span class="stock-badge sold-out">❌ SOLD OUT</span>';
-    isOutOfStock = true;
-    stockClass = "out-of-stock";
-  } else if (stock < 10) {
-    stockBadge = `<span class="stock-badge low-stock">⚠️ Only ${stock} left!</span>`;
-    isOutOfStock = false;
-    stockClass = "low-stock";
-  } else {
-    stockBadge = '<span class="stock-badge in-stock">✅ In Stock</span>';
-    isOutOfStock = false;
-    stockClass = "in-stock";
-  }
-
-  // Price calculation
-  const hasDiscount = product.discount_percentage > 0;
-  const discountedPrice = hasDiscount
-    ? (
-        product.price -
-        (product.price * product.discount_percentage) / 100
-      ).toFixed(2)
-    : product.price;
-
-  return `
-        <div class="product-card ${stockClass}" data-product-id="${product.id}">
-            <img 
-                src="${imageUrl}" 
-                alt="${product.name}" 
-                class="product-image"
-                onerror="this.src='https://via.placeholder.com/300x200?text=Product+Image'"
-            >
-            <h3 class="product-name">${product.name}</h3>
-            
-            <div class="price-section">
-                ${
-                  hasDiscount
-                    ? `
-                    <span class="product-price">₹${discountedPrice}</span>
-                    <span class="original-price">₹${product.price}</span>
-                    <span class="discount-badge">${product.discount_percentage}% OFF</span>
-                `
-                    : `
-                    <span class="product-price">₹${product.price}</span>
-                `
-                }
-                <span class="product-unit">per ${product.unit}</span>
-            </div>
-            
-            ${stockBadge}
-            
-            ${
-              !isOutOfStock
-                ? `
-                <div class="quantity-controls">
-                    <button class="qty-btn minus" onclick="decreaseQty(${product.id})">−</button>
-                    <input 
-                        type="number" 
-                        id="qty-${product.id}" 
-                        class="qty-input" 
-                        value="1" 
-                        min="0.5" 
-                        step="0.5"
-                    >
-                    <button class="qty-btn plus" onclick="increaseQty(${product.id})">+</button>
-                </div>
-                <button class="add-to-cart" onclick="addToCart(${product.id})">
-                    🛒 Add to Cart
-                </button>
-            `
-                : `
-                <button class="add-to-cart" disabled>
-                    Sold Out
-                </button>
-            `
-            }
-        </div>
-    `;
-}
-
-// Quantity increase
-function increaseQty(productId) {
-  const input = document.getElementById(`qty-${productId}`);
-  const currentValue = parseFloat(input.value) || 0;
-  const step = parseFloat(input.step) || 1;
-  input.value = (currentValue + step).toFixed(1);
-}
-
-// Quantity decrease
-function decreaseQty(productId) {
-  const input = document.getElementById(`qty-${productId}`);
-  const currentValue = parseFloat(input.value) || 0;
-  const step = parseFloat(input.step) || 1;
-  const min = parseFloat(input.min) || 1;
-  const newValue = currentValue - step;
-  if (newValue >= min) {
-    input.value = newValue.toFixed(1);
-  }
-}
-
-// ========================================
-// PAGE NAVIGATION SYSTEM
-// ========================================
-
+// Helper for page switching (used by inline onclick attributes)
 function switchPage(pageName) {
-  // Hide all pages
-  document.querySelectorAll(".page").forEach((page) => {
-    page.style.display = "none";
-    page.classList.remove("active");
-  });
-
-  // Show selected page
-  const selectedPage = document.getElementById(`page-${pageName}`);
-  if (selectedPage) {
-    selectedPage.style.display = "block";
-    selectedPage.classList.add("active");
-  }
-
-  // Update active nav button
-  document.querySelectorAll(".nav-item").forEach((btn) => {
-    btn.classList.remove("active");
-  });
-  const activeNav = document.getElementById(`nav-${pageName}`);
-  if (activeNav) {
-    activeNav.classList.add("active");
-  }
-
-  // Load page content
-  switch (pageName) {
-    case "home":
-      // Products already loaded
-      break;
-    case "orders":
-      loadUserOrders();
-      break;
-    case "profile":
-      loadUserProfile();
-      break;
-  }
-}
-
-// ========================================
-// LOAD USER ORDERS
-// ========================================
-
-async function loadUserOrders() {
-  const userId = localStorage.getItem("user_id");
-  const ordersList = document.getElementById("orders-list");
-
-  if (!userId) {
-    ordersList.innerHTML = `
-            <div style="text-align: center; padding: 60px 20px;">
-                <p style="font-size: 48px; margin-bottom: 20px;">📦</p>
-                <h3 style="color: #666;">Please login to view orders</h3>
-            </div>
-        `;
-    return;
-  }
-
-  ordersList.innerHTML =
-    '<p style="text-align: center; padding: 40px;">Loading orders...</p>';
-
-  try {
-    const response = await fetch(
-      `${API_URL}/orders/my-orders?user_id=${userId}`,
-    );
-    const data = await response.json();
-
-    if (data.success && data.orders && data.orders.length > 0) {
-      renderOrders(data.orders);
-    } else {
-      ordersList.innerHTML = `
-                <div style="text-align: center; padding: 60px 20px;">
-                    <p style="font-size: 48px; margin-bottom: 20px;">📦</p>
-                    <h3 style="color: #666;">No orders yet</h3>
-                    <p style="color: #999; margin-top: 10px;">Start shopping to see your orders here!</p>
-                    <button onclick="switchPage('home')" style="margin-top: 20px; padding: 12px 24px; background: #10b981; color: white; border: none; border-radius: 8px; cursor: pointer;">
-                        Browse Products
-                    </button>
-                </div>
-            `;
-    }
-  } catch (error) {
-    console.error("Error loading orders:", error);
-    ordersList.innerHTML = `
-            <div style="text-align: center; padding: 60px 20px;">
-                <p style="font-size: 48px; margin-bottom: 20px;">⚠️</p>
-                <h3 style="color: #666;">Error loading orders</h3>
-                <p style="color: #999; margin-top: 10px;">Please try again later</p>
-            </div>
-        `;
-  }
-}
-
-// ========================================
-// RENDER ORDERS
-// ========================================
-
-function renderOrders(orders) {
-  const html = orders
-    .map((order) => {
-      const statusColors = {
-        pending: "#f59e0b",
-        confirmed: "#3b82f6",
-        preparing: "#8b5cf6",
-        out_for_delivery: "#06b6d4",
-        delivered: "#10b981",
-        cancelled: "#ef4444",
-      };
-
-      const statusColor = statusColors[order.order_status] || "#6b7280";
-
-      return `
-            <div class="order-card" style="background: white; padding: 20px; margin-bottom: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
-                    <div>
-                        <h3 style="margin: 0; font-size: 16px; color: #333;">Order #${order.order_number}</h3>
-                        <p style="margin: 5px 0 0 0; color: #999; font-size: 14px;">
-                            ${new Date(order.created_at).toLocaleDateString(
-                              "en-IN",
-                              {
-                                day: "numeric",
-                                month: "short",
-                                year: "numeric",
-                              },
-                            )}
-                        </p>
-                    </div>
-                    <span style="background: ${statusColor}; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; text-transform: capitalize;">
-                        ${order.order_status.replace("_", " ")}
-                    </span>
-                </div>
-                
-                <div style="border-top: 1px solid #f0f0f0; padding-top: 15px; margin-top: 15px;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                        <span style="color: #666;">Items:</span>
-                        <span style="font-weight: 600;">${order.items ? order.items.length : 0} items</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                        <span style="color: #666;">Payment:</span>
-                        <span style="font-weight: 600; text-transform: capitalize;">${order.payment_method}</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 1px solid #f0f0f0;">
-                        <span style="color: #666; font-weight: 600;">Total Amount:</span>
-                        <span style="font-size: 20px; font-weight: 700; color: #10b981;">₹${order.total_amount}</span>
-                    </div>
-                </div>
-            </div>
-        `;
-    })
-    .join("");
-
-  document.getElementById("orders-list").innerHTML = html;
-}
-
-// ========================================
-// LOAD USER PROFILE
-// ========================================
-
-function loadUserProfile() {
-  const userId = localStorage.getItem("user_id");
-  const mobile = localStorage.getItem("mobile");
-  const name = localStorage.getItem("user_name") || "Guest User";
-  const profileContent = document.getElementById("profile-content");
-
-  if (!userId) {
-    profileContent.innerHTML = `
-            <div style="text-align: center; padding: 60px 20px;">
-                <p style="font-size: 48px; margin-bottom: 20px;">👤</p>
-                <h3 style="color: #666;">Please login first</h3>
-            </div>
-        `;
-    return;
-  }
-
-  const html = `
-        <div class="profile-card" style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); max-width: 500px; margin: 0 auto;">
-            <div style="text-align: center; margin-bottom: 30px;">
-                <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #10b981, #059669); border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-size: 36px;">
-                    👤
-                </div>
-                <h2 style="margin: 0; color: #333;">${name}</h2>
-            </div>
-            
-            <div style="margin: 20px 0;">
-                <div style="padding: 15px; background: #f9fafb; border-radius: 8px; margin-bottom: 12px;">
-                    <p style="margin: 0; color: #666; font-size: 12px; margin-bottom: 4px;">Mobile Number</p>
-                    <p style="margin: 0; font-size: 16px; font-weight: 600; color: #333;">📱 ${mobile}</p>
-                </div>
-                
-                <div style="padding: 15px; background: #f9fafb; border-radius: 8px; margin-bottom: 12px;">
-                    <p style="margin: 0; color: #666; font-size: 12px; margin-bottom: 4px;">User ID</p>
-                    <p style="margin: 0; font-size: 16px; font-weight: 600; color: #333;">#${userId}</p>
-                </div>
-            </div>
-            
-            <button onclick="logoutUser()" style="width: 100%; padding: 15px; background: #ef4444; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 20px;">
-                🚪 Logout
-            </button>
-        </div>
-    `;
-
-  profileContent.innerHTML = html;
-}
-
-// ========================================
-// LOGOUT FUNCTION
-// ========================================
-
-function logoutUser() {
-  if (confirm("Are you sure you want to logout?")) {
-    localStorage.clear();
-    window.location.reload();
-  }
+  document.querySelectorAll(".page").forEach((p) => (p.style.display = "none"));
+  document.getElementById("page-" + pageName).style.display = "block";
+  document
+    .querySelectorAll(".nav-item")
+    .forEach((n) => n.classList.remove("active"));
+  document.getElementById("nav-" + pageName).classList.add("active");
 }
