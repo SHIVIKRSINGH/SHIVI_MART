@@ -2,218 +2,152 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#10b981">
-    <meta name="description" content="Order fresh fruits, vegetables, cakes & pastries">
-    
-    <title>ShiviMart - Fresh Groceries Delivered</title>
-    
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="/manifest.json">
-    
-    <!-- Icons -->
-    <link rel="apple-touch-icon" href="/icon-192.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
-    
-    <!-- Styles -->
-    <link rel="stylesheet" href="/css/styles.css">
-    
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShiviMart - Fresh Groceries</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
+    <link rel="stylesheet" href="/css/styles.css">
     <style>
-        /* Stock Badge Styles */
         .stock-badge {
             position: absolute;
             top: 10px;
             right: 10px;
             padding: 5px 10px;
             border-radius: 4px;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: bold;
             z-index: 10;
         }
-
-        .stock-badge.sold-out {
-            background: #ff4444;
+        .stock-badge.sold-out { background: #ff4444; color: white; }
+        .stock-badge.low-stock { background: #ff9800; color: white; }
+        .product-card.out-of-stock { opacity: 0.6; }
+        .product-card.out-of-stock img { filter: grayscale(100%); }
+        
+        .quantity-selector {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 0 12px 12px;
+        }
+        .quantity-selector button {
+            width: 32px;
+            height: 32px;
+            margin: 0;
+            padding: 0;
+            background: #10b981;
             color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
         }
-
-        .stock-badge.low-stock {
-            background: #ff9800;
-            color: white;
-        }
-
-        .product-card.out-of-stock {
-            opacity: 0.6;
-        }
-
-        .product-card.out-of-stock img {
-            filter: grayscale(100%);
+        .quantity-selector span {
+            font-weight: 600;
+            min-width: 30px;
+            text-align: center;
         }
     </style>
 </head>
 <body>
-    <!-- App Container -->
     <div id="app">
-        <!-- Loading Screen -->
         <div id="loading-screen" class="loading-screen">
             <div class="loader"></div>
             <p>Loading ShiviMart...</p>
         </div>
 
-        <!-- Login Screen -->
         <div id="login-screen" class="screen" style="display:none;">
             <div class="login-container">
                 <div class="logo">
-                    <h1>🛒 SHIVI MART FreshCart</h1>
-                    <p>Fresh Fruits/Veggies/Cakes/Groceries at your doorstep</p>
+                    <h1>🛒 ShiviMart</h1>
+                    <p>Fresh Groceries at your doorstep</p>
                 </div>
-                
-                <form id="login-form" class="form">
+                <form id="login-form">
                     <div class="form-group">
                         <label>Mobile Number</label>
-                        <input 
-                            type="tel" 
-                            id="mobile-input" 
-                            placeholder="Enter 10-digit mobile" 
-                            maxlength="10"
-                            required
-                        >
+                        <input type="tel" id="mobile-input" placeholder="10-digit mobile" maxlength="10" required>
                     </div>
-                    <button type="submit" class="btn btn-primary btn-block">
-                        Send OTP
-                    </button>
+                    <button type="submit" class="btn btn-primary btn-block">Send OTP</button>
                 </form>
             </div>
         </div>
 
-        <!-- OTP Verification Screen -->
         <div id="otp-screen" class="screen" style="display:none;">
             <div class="login-container">
                 <div class="logo">
                     <h2>Verify OTP</h2>
-                    <p>Enter OTP sent to <span id="mobile-display"></span></p>
+                    <p>OTP sent to <span id="mobile-display"></span></p>
                 </div>
-                
-                <form id="otp-form" class="form">
+                <form id="otp-form">
                     <div class="form-group">
                         <label>Enter OTP</label>
-                        <input 
-                            type="text" 
-                            id="otp-input" 
-                            placeholder="Enter 6-digit OTP" 
-                            maxlength="6"
-                            required
-                        >
+                        <input type="text" id="otp-input" placeholder="6-digit OTP" maxlength="6" required>
                     </div>
-                    <button type="submit" class="btn btn-primary btn-block">
-                        Verify & Login
-                    </button>
-                    <button type="button" id="resend-otp" class="btn btn-link btn-block">
-                        Resend OTP
-                    </button>
+                    <button type="submit" class="btn btn-primary btn-block">Verify</button>
+                    <button type="button" id="resend-otp" class="btn btn-link btn-block">Resend OTP</button>
                 </form>
             </div>
         </div>
 
-        <!-- Address Selection Screen -->
         <div id="address-screen" class="screen" style="display:none;">
             <div class="container">
                 <h2>Delivery Address</h2>
-                
-                <form id="address-form" class="form">
+                <form id="address-form">
                     <div class="form-group">
-                        <label>Select Society</label>
+                        <label>Society</label>
                         <select id="society-select" required>
-                            <option value="">Choose your society...</option>
+                            <option value="">Choose society...</option>
                         </select>
                     </div>
-                    
                     <div class="form-group">
-                        <label>Tower Number (Optional)</label>
-                        <input type="text" id="tower-input" placeholder="e.g., A, B, 1, 2">
+                        <label>Tower (Optional)</label>
+                        <input type="text" id="tower-input">
                     </div>
-                    
                     <div class="form-group">
                         <label>Flat Number</label>
-                        <input type="text" id="flat-input" placeholder="e.g., 101, 202" required>
+                        <input type="text" id="flat-input" required>
                     </div>
-                    
                     <div class="form-group">
                         <label>Landmark (Optional)</label>
-                        <input type="text" id="landmark-input" placeholder="e.g., Near park">
+                        <input type="text" id="landmark-input">
                     </div>
-                    
-                    <button type="submit" class="btn btn-primary btn-block">
-                        Continue Shopping
-                    </button>
+                    <button type="submit" class="btn btn-primary btn-block">Continue</button>
                 </form>
             </div>
         </div>
 
-        <!-- Main App Screen -->
         <div id="main-screen" class="screen" style="display:none;">
-            <!-- Header -->
             <header class="header">
                 <div class="header-content">
                     <h1>🛒 ShiviMart</h1>
-                    <button id="cart-btn" class="cart-btn">
-                        🛒 <span id="cart-count">0</span>
-                    </button>
+                    <button id="cart-btn" class="cart-btn">🛒 <span id="cart-count">0</span></button>
                 </div>
             </header>
 
-            <!-- Pages Container -->
             <div class="pages-wrapper">
-                
-                <!-- HOME PAGE (Products) -->
                 <div id="page-home" class="page active">
-                    <!-- Categories -->
-                    <div class="categories" id="categories-container">
-                        <!-- Categories will be loaded here -->
-                    </div>
-
-                    <!-- Products -->
+                    <div class="categories" id="categories-container"></div>
                     <div class="container">
                         <div class="products-header">
                             <h2 id="products-title">All Products</h2>
-                            <input type="search" id="search-input" placeholder="Search products...">
+                            <input type="search" id="search-input" placeholder="Search...">
                         </div>
-                        <div class="products-grid" id="products-container">
-                            <!-- Products will be loaded here -->
-                        </div>
+                        <div class="products-grid" id="products-container"></div>
                     </div>
                 </div>
 
-                <!-- ORDERS PAGE -->
-                <div id="page-orders" class="page" style="display: none;">
+                <div id="page-orders" class="page" style="display:none;">
                     <div class="container">
                         <h2 style="margin: 20px 0;">My Orders</h2>
-                        <div id="orders-list">
-                            <p style="text-align: center; padding: 40px; color: #999;">
-                                Loading your orders...
-                            </p>
-                        </div>
+                        <div id="orders-list"></div>
                     </div>
                 </div>
 
-                <!-- PROFILE PAGE -->
-                <div id="page-profile" class="page" style="display: none;">
+                <div id="page-profile" class="page" style="display:none;">
                     <div class="container">
                         <h2 style="margin: 20px 0;">My Profile</h2>
-                        <div id="profile-content">
-                            <p style="text-align: center; padding: 40px; color: #999;">
-                                Loading profile...
-                            </p>
-                        </div>
+                        <div id="profile-content"></div>
                     </div>
                 </div>
-
             </div>
 
-            <!-- Bottom Navigation -->
             <nav class="bottom-nav">
                 <button class="nav-item active" onclick="switchPage('home')" id="nav-home">
                     <span class="nav-icon">🏠</span>
@@ -230,25 +164,18 @@
             </nav>
         </div>
 
-        <!-- Cart Modal -->
         <div id="cart-modal" class="modal">
             <div class="modal-content">
                 <div class="modal-header">
                     <h2>Your Cart</h2>
-                    <button class="close-btn" id="close-cart">&times;</button>
+                    <button class="close-btn" onclick="closeModal('cart-modal')">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <div id="cart-items">
-                        <!-- Cart items will be loaded here -->
-                    </div>
-                    <div class="cart-summary">
+                    <div id="cart-items"></div>
+                    <div class="cart-summary" style="display:none;">
                         <div class="summary-row">
                             <span>Subtotal:</span>
                             <span id="cart-subtotal">₹0</span>
-                        </div>
-                        <div class="summary-row">
-                            <span>Discount:</span>
-                            <span id="cart-discount" class="text-green">-₹0</span>
                         </div>
                         <div class="summary-row total">
                             <span>Total:</span>
@@ -257,68 +184,409 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button id="checkout-btn" class="btn btn-primary btn-block">
-                        Proceed to Checkout
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Checkout Modal -->
-        <div id="checkout-modal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2>Select Delivery Slot</h2>
-                    <button class="close-btn" id="close-checkout">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label>Delivery Date</label>
-                        <input type="date" id="delivery-date" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Select Time Slot</label>
-                        <div id="slots-container">
-                            <!-- Time slots will be loaded here -->
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Payment Method</label>
-                        <div class="payment-methods">
-                            <label class="radio-label">
-                                <input type="radio" name="payment" value="cash" checked>
-                                <span>💵 Cash on Delivery</span>
-                            </label>
-                            <label class="radio-label">
-                                <input type="radio" name="payment" value="upi">
-                                <span>📱 UPI (Pay to delivery boy)</span>
-                            </label>
-                            <label class="radio-label">
-                                <input type="radio" name="payment" value="card">
-                                <span>💳 Card (Pay to delivery boy)</span>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button id="place-order-btn" class="btn btn-primary btn-block">
-                        Place Order - <span id="final-total">₹0</span>
-                    </button>
+                    <button id="checkout-btn" class="btn btn-primary btn-block" style="display:none;">Checkout</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Toast Notifications -->
     <div id="toast-container"></div>
 
-    <!-- ============================================
-         JAVASCRIPT FILES - DO NOT ADD ANY INLINE SCRIPTS!
-         ============================================ -->
-    <script src="/js/config.js"></script>
-    <script src="/js/utils.js"></script>
-    <script src="/js/api.js"></script>
-    <script src="/js/cart.js"></script>
-    <script src="/js/app.js"></script>
+    <script>
+// ============================================
+// COMPLETE SHIVIMART APPLICATION
+// ============================================
+
+const API_URL = window.location.origin + '/api';
+let currentMobile = '';
+let authToken = '';
+let userId = '';
+let allProducts = [];
+let cartItems = [];
+
+// ============ UTILITIES ============
+function showToast(msg, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = msg;
+    document.getElementById('toast-container').appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+function showScreen(id) {
+    console.log('📍 Screen:', id);
+    document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
+    const screen = document.getElementById(id);
+    if (screen) screen.style.display = 'block';
+}
+
+function switchPage(page) {
+    document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+    document.getElementById('page-' + page).style.display = 'block';
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('nav-' + page).classList.add('active');
+    
+    if (page === 'orders') loadOrders();
+    if (page === 'profile') loadProfile();
+}
+
+function openModal(id) {
+    document.getElementById(id).classList.add('active');
+}
+
+function closeModal(id) {
+    document.getElementById(id).classList.remove('active');
+}
+
+// ============ API CALLS ============
+async function apiCall(endpoint, method = 'GET', data = null) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+    
+    const options = { method, headers };
+    if (data) options.body = JSON.stringify(data);
+    
+    const res = await fetch(API_URL + endpoint, options);
+    const json = await res.json();
+    
+    if (!res.ok) throw new Error(json.error || 'Request failed');
+    return json;
+}
+
+// ============ LOGIN ============
+document.getElementById('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const mobile = document.getElementById('mobile-input').value.trim();
+    
+    if (!/^\d{10}$/.test(mobile)) {
+        showToast('Invalid mobile number', 'error');
+        return;
+    }
+    
+    try {
+        await apiCall('/auth/send-otp', 'POST', { mobile });
+        currentMobile = mobile;
+        document.getElementById('mobile-display').textContent = mobile;
+        showScreen('otp-screen');
+        showToast('OTP sent!', 'success');
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+});
+
+// ============ OTP VERIFY ============
+document.getElementById('otp-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const otp = document.getElementById('otp-input').value.trim();
+    
+    try {
+        const res = await apiCall('/auth/verify-otp', 'POST', { mobile: currentMobile, otp });
+        
+        authToken = res.token;
+        userId = res.user.id;
+        localStorage.setItem('auth_token', res.token);
+        localStorage.setItem('user_id', res.user.id);
+        
+        console.log('✅ Token saved:', authToken);
+        
+        try {
+            const addr = await apiCall('/societies/my-addresses');
+            if (addr.addresses && addr.addresses.length > 0) {
+                showScreen('main-screen');
+                loadProducts();
+            } else {
+                loadSocieties();
+                showScreen('address-screen');
+            }
+        } catch {
+            loadSocieties();
+            showScreen('address-screen');
+        }
+        
+        showToast('Login successful!', 'success');
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+});
+
+document.getElementById('resend-otp').addEventListener('click', async () => {
+    try {
+        await apiCall('/auth/send-otp', 'POST', { mobile: currentMobile });
+        showToast('OTP resent!', 'success');
+    } catch (err) {
+        showToast('Failed to resend', 'error');
+    }
+});
+
+// ============ SOCIETIES ============
+async function loadSocieties() {
+    try {
+        const data = await apiCall('/societies');
+        const societies = Array.isArray(data) ? data : (data.societies || []);
+        
+        const select = document.getElementById('society-select');
+        select.innerHTML = '<option value="">Choose society...</option>' +
+            societies.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+    } catch (err) {
+        showToast('Failed to load societies', 'error');
+    }
+}
+
+// ============ ADDRESS SAVE ============
+document.getElementById('address-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const data = {
+        society_id: parseInt(document.getElementById('society-select').value),
+        tower_no: document.getElementById('tower-input').value || null,
+        flat_no: document.getElementById('flat-input').value,
+        landmark: document.getElementById('landmark-input').value || null,
+        is_default: true
+    };
+    
+    try {
+        await apiCall('/societies/address', 'POST', data);
+        showToast('Address saved!', 'success');
+        showScreen('main-screen');
+        loadProducts();
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+});
+
+// ============ PRODUCTS ============
+async function loadProducts() {
+    try {
+        const data = await apiCall('/products');
+        allProducts = data.products || data || [];
+        displayProducts(allProducts);
+        loadCategories();
+    } catch (err) {
+        showToast('Failed to load products', 'error');
+    }
+}
+
+function loadCategories() {
+    const categories = ['All', ...new Set(allProducts.map(p => p.category))];
+    const container = document.getElementById('categories-container');
+    
+    container.innerHTML = categories.map((cat, i) => 
+        `<button class="category-btn ${i === 0 ? 'active' : ''}" onclick="filterByCategory('${cat}')">${cat}</button>`
+    ).join('');
+}
+
+function filterByCategory(cat) {
+    document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    const filtered = cat === 'All' ? allProducts : allProducts.filter(p => p.category === cat);
+    displayProducts(filtered);
+    document.getElementById('products-title').textContent = cat === 'All' ? 'All Products' : cat;
+}
+
+function displayProducts(products) {
+    const container = document.getElementById('products-container');
+    
+    container.innerHTML = products.map(p => {
+        const outOfStock = p.stock_quantity <= 0;
+        const lowStock = p.stock_quantity > 0 && p.stock_quantity < 10;
+        const inCart = cartItems.find(item => item.id === p.id);
+        
+        let badge = '';
+        if (outOfStock) badge = '<div class="stock-badge sold-out">SOLD OUT</div>';
+        else if (lowStock) badge = `<div class="stock-badge low-stock">Only ${p.stock_quantity} left</div>`;
+        
+        let button = '';
+        if (outOfStock) {
+            button = '<button disabled>Out of Stock</button>';
+        } else if (inCart) {
+            button = `
+                <div class="quantity-selector">
+                    <button onclick="updateQuantity(${p.id}, ${inCart.quantity - 1})">−</button>
+                    <span>${inCart.quantity}</span>
+                    <button onclick="updateQuantity(${p.id}, ${inCart.quantity + 1})" 
+                        ${inCart.quantity >= p.stock_quantity ? 'disabled' : ''}>+</button>
+                </div>
+            `;
+        } else {
+            button = `<button onclick="addToCart(${p.id})">Add to Cart</button>`;
+        }
+        
+        return `
+            <div class="product-card ${outOfStock ? 'out-of-stock' : ''}">
+                ${badge}
+                <img src="${p.image_url || '/images/placeholder.png'}" alt="${p.name}">
+                <h3>${p.name}</h3>
+                <p>${p.category}</p>
+                <div class="price">₹${p.price} / ${p.unit}</div>
+                ${button}
+            </div>
+        `;
+    }).join('');
+}
+
+// ============ CART ============
+function addToCart(id) {
+    const product = allProducts.find(p => p.id === id);
+    if (!product) return;
+    
+    const existing = cartItems.find(item => item.id === id);
+    if (existing) {
+        existing.quantity++;
+    } else {
+        cartItems.push({ ...product, quantity: 1 });
+    }
+    
+    updateCartUI();
+    displayProducts(allProducts);
+    showToast('Added to cart!', 'success');
+}
+
+function updateQuantity(id, newQty) {
+    if (newQty <= 0) {
+        cartItems = cartItems.filter(item => item.id !== id);
+    } else {
+        const item = cartItems.find(i => i.id === id);
+        if (item) item.quantity = newQty;
+    }
+    
+    updateCartUI();
+    displayProducts(allProducts);
+}
+
+function updateCartUI() {
+    const count = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+    document.getElementById('cart-count').textContent = count;
+    
+    const cartItemsDiv = document.getElementById('cart-items');
+    const summary = document.querySelector('.cart-summary');
+    const checkoutBtn = document.getElementById('checkout-btn');
+    
+    if (cartItems.length === 0) {
+        cartItemsDiv.innerHTML = '<div class="empty-state"><p>Cart is empty</p></div>';
+        summary.style.display = 'none';
+        checkoutBtn.style.display = 'none';
+    } else {
+        cartItemsDiv.innerHTML = cartItems.map(item => `
+            <div class="cart-item">
+                <img src="${item.image_url || '/images/placeholder.png'}" alt="${item.name}">
+                <div class="cart-item-details">
+                    <h4>${item.name}</h4>
+                    <p>₹${item.price} × ${item.quantity}</p>
+                </div>
+                <div>₹${item.price * item.quantity}</div>
+            </div>
+        `).join('');
+        
+        const total = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        document.getElementById('cart-subtotal').textContent = `₹${total}`;
+        document.getElementById('cart-total').textContent = `₹${total}`;
+        
+        summary.style.display = 'block';
+        checkoutBtn.style.display = 'block';
+    }
+}
+
+document.getElementById('cart-btn').addEventListener('click', () => {
+    updateCartUI();
+    openModal('cart-modal');
+});
+
+// ============ ORDERS ============
+async function loadOrders() {
+    const container = document.getElementById('orders-list');
+    
+    try {
+        const data = await apiCall(`/orders/user/${userId}`);
+        const orders = data.orders || data || [];
+        
+        if (orders.length === 0) {
+            container.innerHTML = '<div class="empty-state"><p>No orders yet</p></div>';
+            return;
+        }
+        
+        container.innerHTML = orders.map(o => `
+            <div style="background: white; padding: 20px; margin-bottom: 15px; border-radius: 12px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <strong>Order #${o.id}</strong>
+                    <span>${o.status || 'Pending'}</span>
+                </div>
+                <p>Date: ${new Date(o.created_at).toLocaleDateString()}</p>
+                <p>Total: ₹${o.total_amount}</p>
+            </div>
+        `).join('');
+    } catch (err) {
+        container.innerHTML = '<div class="empty-state"><p>Failed to load orders</p></div>';
+    }
+}
+
+// ============ PROFILE ============
+async function loadProfile() {
+    const container = document.getElementById('profile-content');
+    
+    container.innerHTML = `
+        <div style="background: white; padding: 30px; border-radius: 12px;">
+            <h3>Personal Info</h3>
+            <p>Mobile: ${currentMobile || 'Not available'}</p>
+            <p>User ID: ${userId}</p>
+            <button onclick="logout()" style="margin-top: 20px; padding: 12px 24px; background: #ef4444; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                Logout
+            </button>
+        </div>
+    `;
+}
+
+function logout() {
+    if (confirm('Logout?')) {
+        localStorage.clear();
+        location.reload();
+    }
+}
+
+// ============ SEARCH ============
+document.getElementById('search-input').addEventListener('input', (e) => {
+    const term = e.target.value.toLowerCase();
+    const filtered = allProducts.filter(p => p.name.toLowerCase().includes(term));
+    displayProducts(filtered);
+});
+
+// ============ INIT ============
+window.addEventListener('DOMContentLoaded', async () => {
+    console.log('🚀 ShiviMart starting...');
+    
+    const savedToken = localStorage.getItem('auth_token');
+    
+    if (savedToken) {
+        authToken = savedToken;
+        userId = localStorage.getItem('user_id');
+        console.log('✅ Token found');
+        
+        try {
+            const addr = await apiCall('/societies/my-addresses');
+            
+            if (addr.addresses && addr.addresses.length > 0) {
+                console.log('✅ Has address');
+                showScreen('main-screen');
+                loadProducts();
+            } else {
+                console.log('⚠️ No address');
+                loadSocieties();
+                showScreen('address-screen');
+            }
+        } catch (err) {
+            console.log('❌ Token invalid');
+            localStorage.clear();
+            showScreen('login-screen');
+        }
+    } else {
+        console.log('ℹ️ No token');
+        showScreen('login-screen');
+    }
+    
+    document.getElementById('loading-screen').style.display = 'none';
+});
+
+console.log('✅ ShiviMart ready');
+    </script>
 </body>
 </html>
