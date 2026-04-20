@@ -917,19 +917,18 @@
         }
 
         // Product CRUD
-        function showAddProductModal() {
+        async function showAddProductModal() {
             document.getElementById('product-modal-title').textContent = 'Add New Product';
             document.getElementById('product-form').reset();
             document.getElementById('product-id').value = '';
             document.getElementById('product-available').checked = true;
-            loadCategoryDropdown();
+            await loadCategoryDropdown();
             openModal('product-modal');
         }
 
-        function editProduct(product) {
+        async function editProduct(product) {
             document.getElementById('product-modal-title').textContent = 'Edit Product';
             document.getElementById('product-id').value = product.id;
-            document.getElementById('product-category').value = product.category_id;
             document.getElementById('product-name').value = product.name;
             document.getElementById('product-description').value = product.description || '';
             document.getElementById('product-price').value = product.price;
@@ -938,7 +937,11 @@
             document.getElementById('product-stock').value = product.stock_quantity;
             document.getElementById('product-available').checked = product.is_available;
             document.getElementById('product-featured').checked = product.is_featured;
-            loadCategoryDropdown();
+            
+            // Load categories first, then set the value
+            await loadCategoryDropdown();
+            document.getElementById('product-category').value = product.category_id;
+            
             openModal('product-modal');
         }
 
@@ -1045,7 +1048,18 @@
             }
         }
 
-        function loadCategoryDropdown() {
+        async function loadCategoryDropdown() {
+            // If categories not loaded yet, load them first
+            if (allCategories.length === 0) {
+                try {
+                    const response = await fetch(`${API_URL}/categories`);
+                    const data = await response.json();
+                    allCategories = data.categories || [];
+                } catch (error) {
+                    console.error('Error loading categories:', error);
+                }
+            }
+            
             const select = document.getElementById('product-category');
             select.innerHTML = '<option value="">Select category...</option>' +
                 allCategories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
