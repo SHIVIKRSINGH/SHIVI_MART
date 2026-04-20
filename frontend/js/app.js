@@ -1,6 +1,6 @@
 // ============================================
-// FIXED APP.JS - Proper Session & Database Integration
-// Replace your existing app.js with this
+// SHIVIMART APP.JS - FINAL VERSION
+// Database-based session with proper authentication
 // ============================================
 
 class App {
@@ -13,21 +13,20 @@ class App {
   }
 
   async init() {
-    console.log("🚀 Initializing ShiviMart...");
+    console.log("🚀 ShiviMart Initializing...");
 
-    // Check authentication token
+    // Check for authentication token
     const token = Utils.storage.get(CONFIG.STORAGE_KEYS.AUTH_TOKEN);
 
     if (token) {
-      console.log("✅ Token found, checking user session...");
+      console.log("✅ Token found, verifying session...");
 
       try {
-        // Fetch user profile from database to check if they have address
+        // Verify token and get user profile from database
         const profile = await API.auth.getProfile();
+        console.log("✅ User profile loaded:", profile.user.mobile);
 
-        console.log("✅ User profile loaded:", profile);
-
-        // Check if user has addresses in database
+        // Check if user has saved addresses in database
         const addresses = await API.societies.getMyAddresses();
 
         if (
@@ -35,7 +34,7 @@ class App {
           addresses.addresses &&
           addresses.addresses.length > 0
         ) {
-          console.log("✅ User has saved address in database");
+          console.log("✅ User has address in database");
           // Save to localStorage for quick access
           Utils.storage.set(
             CONFIG.STORAGE_KEYS.ADDRESS_DATA,
@@ -43,16 +42,16 @@ class App {
           );
           await this.loadMainScreen();
         } else {
-          console.log("⚠️ User needs to add address");
+          console.log("⚠️ No address found - showing address form");
           await this.showAddressScreen();
         }
       } catch (error) {
-        console.error("❌ Session check failed:", error);
-        // Token invalid or expired - show login
+        console.error("❌ Session verification failed:", error);
+        // Token invalid or expired
         this.clearSessionAndShowLogin();
       }
     } else {
-      console.log("ℹ️ No token found, showing login");
+      console.log("ℹ️ No token found - showing login");
       this.showLoginScreen();
     }
 
@@ -92,12 +91,13 @@ class App {
       // Show OTP in console for development
       if (response.dev_otp) {
         console.log("🔐 Development OTP:", response.dev_otp);
-        Utils.showToast(`OTP sent! (Check console)`, "success");
+        Utils.showToast(`OTP sent! (Dev OTP: ${response.dev_otp})`, "success");
       } else {
         Utils.showToast("OTP sent successfully", "success");
       }
 
       Utils.showScreen("otp-screen");
+      document.getElementById("otp-input").focus();
 
       btn.disabled = false;
       btn.textContent = "Send OTP";
@@ -123,7 +123,7 @@ class App {
       btn.disabled = true;
       btn.textContent = "Verifying...";
 
-      // ✅ CRITICAL: This saves the token via API.auth.verifyOTP
+      // Verify OTP - this saves token via API.auth.verifyOTP
       const response = await API.auth.verifyOTP(this.currentMobile, otp);
 
       console.log("✅ OTP verified successfully");
@@ -131,7 +131,6 @@ class App {
         "✅ Token saved:",
         Utils.storage.get(CONFIG.STORAGE_KEYS.AUTH_TOKEN),
       );
-      console.log("✅ User:", response.user);
 
       Utils.showToast("Login successful!", "success");
 
@@ -235,7 +234,7 @@ class App {
       btn.disabled = true;
       btn.textContent = "Saving...";
 
-      // ✅ Save to database - API.societies.addAddress uses token automatically
+      // Save to database - uses token automatically
       await API.societies.addAddress(addressData);
 
       console.log("✅ Address saved to database");
@@ -590,7 +589,7 @@ document.addEventListener("DOMContentLoaded", () => {
   window.app = new App();
 });
 
-// Helper for page switching (used by inline onclick attributes)
+// Helper function for inline onclick navigation
 function switchPage(pageName) {
   document.querySelectorAll(".page").forEach((p) => (p.style.display = "none"));
   document.getElementById("page-" + pageName).style.display = "block";
