@@ -852,14 +852,17 @@ document.getElementById('address-form').addEventListener('submit', async (e) => 
     try {
         const session = loadSession();
         const addressData = {
-            user_id: session.userId,
             society_id: parseInt(society),
-            tower: document.getElementById('tower-input').value.trim() || null,
-            flat: flat,
-            landmark: document.getElementById('landmark-input').value.trim() || null
+            tower_no: document.getElementById('tower-input').value.trim() || null,
+            flat_no: flat,
+            landmark: document.getElementById('landmark-input').value.trim() || null,
+            is_default: true
         };
         
-        await apiCall('/users/update-address', 'POST', addressData);
+        // Use the correct existing endpoint
+        await apiCall('/societies/address', 'POST', addressData);
+        
+        // Save to localStorage for quick access
         localStorage.setItem('address', JSON.stringify(addressData));
         
         showToast('Address saved!', 'success');
