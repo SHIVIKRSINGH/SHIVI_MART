@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShiviMart - Fresh Groceries</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <div id="app">
+        <div id="loading-screen" class="loading-screen">
+            <div class="loader"></div>
+            <p>Loading ShiviMart...</p>
+        </div>
+
+        <div id="login-screen" class="screen" style="display:none;">
+            <div class="login-container">
+                <div class="logo">
+                    <h1>🛒 ShiviMart</h1>
+                    <p>Fresh Groceries at your doorstep</p>
+                </div>
+                <form id="login-form">
+                    <div class="form-group">
+                        <label>Mobile Number</label>
+                        <input type="tel" id="mobile-input" placeholder="10-digit mobile" maxlength="10" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Send OTP</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="otp-screen" class="screen" style="display:none;">
+            <div class="login-container">
+                <div class="logo">
+                    <h2>Verify OTP</h2>
+                    <p>OTP sent to <span id="mobile-display"></span></p>
+                </div>
+                <form id="otp-form">
+                    <div class="form-group">
+                        <label>Enter OTP</label>
+                        <input type="text" id="otp-input" placeholder="6-digit OTP" maxlength="6" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Verify</button>
+                    <button type="button" id="resend-otp" class="btn btn-link btn-block">Resend OTP</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="address-screen" class="screen" style="display:none;">
+            <div class="container">
+                <h2>Delivery Address</h2>
+                <form id="address-form">
+                    <div class="form-group">
+                        <label>Society</label>
+                        <select id="society-select" required>
+                            <option value="">Choose society...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Tower (Optional)</label>
+                        <input type="text" id="tower-input">
+                    </div>
+                    <div class="form-group">
+                        <label>Flat Number</label>
+                        <input type="text" id="flat-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Landmark (Optional)</label>
+                        <input type="text" id="landmark-input">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Continue</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="main-screen" class="screen" style="display:none;">
+            <header class="header">
+                <div class="header-content">
+                    <h1>🛒 ShiviMart</h1>
+                    <button id="cart-btn" class="cart-btn">🛒 <span id="cart-count">0</span></button>
+                </div>
+            </header>
+
+            <div id="page-home" class="page active">
+                <div class="categories" id="categories-container"></div>
+                <div class="container">
+                    <div class="products-header">
+                        <h2>All Products</h2>
+                        <input type="search" id="search-input" placeholder="Search...">
+                    </div>
+                    <div class="products-grid" id="products-container"></div>
+                </div>
+            </div>
+
+            <nav class="bottom-nav">
+                <button class="nav-item active" onclick="switchPage('home')">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-label">Home</span>
+                </button>
+                <button class="nav-item" onclick="switchPage('orders')">
+                    <span class="nav-icon">📦</span>
+                    <span class="nav-label">Orders</span>
+                </button>
+                <button class="nav-item" onclick="switchPage('profile')">
+                    <span class="nav-icon">👤</span>
+                    <span class="nav-label">Profile</span>
+                </button>
+            </nav>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script>
+// ============================================
+// COMPLETE STANDALONE SHIVIMART APP
+// ALL CODE IN ONE FILE
+// ============================================
+
+const API_URL = window.location.origin + '/api';
+let currentMobile = '';
+let authToken = '';
+let allProducts = [];
+
+// ============ UTILITIES ============
+function showToast(msg, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = msg;
+    document.getElementById('toast-container').appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+function showScreen(id) {
+    console.log('📍 Showing:', id);
+    document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
+    const screen = document.getElementById(id);
+    if (screen) screen.style.display = 'block';
+}
+
+function switchPage(page) {
+    console.log('📄 Page:', page);
+}
+
+// ============ API CALLS ============
+async function apiCall(endpoint, method = 'GET', data = null) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+    
+    const options = { method, headers };
+    if (data) options.body = JSON.stringify(data);
+    
+    const res = await fetch(API_URL + endpoint, options);
+    const json = await res.json();
+    
+    if (!res.ok) throw new Error(json.error || 'Request failed');
+    return json;
+}
+
+// ============ LOGIN ============
+document.getElementById('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const mobile = document.getElementById('mobile-input').value.trim();
+    
+    if (!/^\d{10}$/.test(mobile)) {
+        showToast('Invalid mobile number', 'error');
+        return;
+    }
+    
+    try {
+        await apiCall('/auth/send-otp', 'POST', { mobile });
+        currentMobile = mobile;
+        document.getElementById('mobile-display').textContent = mobile;
+        showScreen('otp-screen');
+        showToast('OTP sent!', 'success');
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+});
+
+// ============ OTP VERIFY ============
+document.getElementById('otp-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const otp = document.getElementById('otp-input').value.trim();
+    
+    try {
+        const res = await apiCall('/auth/verify-otp', 'POST', { mobile: currentMobile, otp });
+        
+        // SAVE TOKEN
+        authToken = res.token;
+        localStorage.setItem('auth_token', res.token);
+        
+        console.log('✅ Token saved:', authToken);
+        
+        // Check for address
+        try {
+            const addr = await apiCall('/societies/my-addresses');
+            if (addr.addresses && addr.addresses.length > 0) {
+                showScreen('main-screen');
+                loadProducts();
+            } else {
+                loadSocieties();
+                showScreen('address-screen');
+            }
+        } catch {
+            loadSocieties();
+            showScreen('address-screen');
+        }
+        
+        showToast('Login successful!', 'success');
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+});
+
+document.getElementById('resend-otp').addEventListener('click', async () => {
+    try {
+        await apiCall('/auth/send-otp', 'POST', { mobile: currentMobile });
+        showToast('OTP resent!', 'success');
+    } catch (err) {
+        showToast('Failed to resend', 'error');
+    }
+});
+
+// ============ SOCIETIES ============
+async function loadSocieties() {
+    try {
+        const data = await apiCall('/societies');
+        const societies = Array.isArray(data) ? data : (data.societies || []);
+        
+        const select = document.getElementById('society-select');
+        select.innerHTML = '<option value="">Choose society...</option>' +
+            societies.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+    } catch (err) {
+        showToast('Failed to load societies', 'error');
+    }
+}
+
+// ============ ADDRESS SAVE ============
+document.getElementById('address-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const data = {
+        society_id: parseInt(document.getElementById('society-select').value),
+        tower_no: document.getElementById('tower-input').value || null,
+        flat_no: document.getElementById('flat-input').value,
+        landmark: document.getElementById('landmark-input').value || null,
+        is_default: true
+    };
+    
+    try {
+        await apiCall('/societies/address', 'POST', data);
+        showToast('Address saved!', 'success');
+        showScreen('main-screen');
+        loadProducts();
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+});
+
+// ============ PRODUCTS ============
+async function loadProducts() {
+    try {
+        const data = await apiCall('/products');
+        allProducts = data.products || data || [];
+        displayProducts(allProducts);
+    } catch (err) {
+        showToast('Failed to load products', 'error');
+    }
+}
+
+function displayProducts(products) {
+    const container = document.getElementById('products-container');
+    
+    container.innerHTML = products.map(p => {
+        const outOfStock = p.stock_quantity <= 0;
+        const badge = outOfStock ? '<div class="stock-badge sold-out">SOLD OUT</div>' : '';
+        const btn = outOfStock 
+            ? '<button disabled>Out of Stock</button>'
+            : `<button onclick="addToCart(${p.id})">Add to Cart</button>`;
+        
+        return `
+            <div class="product-card ${outOfStock ? 'out-of-stock' : ''}">
+                ${badge}
+                <img src="${p.image_url || '/images/placeholder.png'}" alt="${p.name}">
+                <h3>${p.name}</h3>
+                <p>${p.category}</p>
+                <div class="price">₹${p.price} / ${p.unit}</div>
+                ${btn}
+            </div>
+        `;
+    }).join('');
+}
+
+function addToCart(id) {
+    showToast('Added to cart!', 'success');
+}
+
+// ============ INIT ON PAGE LOAD ============
+window.addEventListener('DOMContentLoaded', async () => {
+    console.log('🚀 App starting...');
+    
+    // Check for saved token
+    const savedToken = localStorage.getItem('auth_token');
+    
+    if (savedToken) {
+        authToken = savedToken;
+        console.log('✅ Found token');
+        
+        try {
+            // Verify token and get addresses
+            const addr = await apiCall('/societies/my-addresses');
+            
+            if (addr.addresses && addr.addresses.length > 0) {
+                console.log('✅ Has address');
+                showScreen('main-screen');
+                loadProducts();
+            } else {
+                console.log('⚠️ No address');
+                loadSocieties();
+                showScreen('address-screen');
+            }
+        } catch (err) {
+            console.log('❌ Token invalid');
+            localStorage.removeItem('auth_token');
+            showScreen('login-screen');
+        }
+    } else {
+        console.log('ℹ️ No token');
+        showScreen('login-screen');
+    }
+    
+    // Hide loading
+    document.getElementById('loading-screen').style.display = 'none';
+});
+
+console.log('✅ ShiviMart loaded');
+    </script>
+</body>
+</html>
