@@ -507,6 +507,10 @@
         .image-preview-card .remove-btn:hover {
             background: #dc2626;
         }
+        @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
 
         @media (max-width: 768px) {
             .sidebar {
@@ -553,6 +557,7 @@
             <div class="menu-item" onclick="showSection('orders')">📋 Orders</div>
             <div class="menu-item" onclick="showSection('customers')">👥 Customers</div>
             <div class="menu-item" onclick="showSection('societies')">🏘️ Societies</div>
+            <div class="menu-item" onclick="showSection('bulk-upload')">📤 Bulk Upload</div>
         </div>
 
         <!-- Main Content -->
@@ -640,6 +645,119 @@
                     <div id="societies-table"></div>
                 </div>
             </div>
+
+            <!-- Bulk Upload Section -->
+<div id="section-bulk-upload" class="content-section">
+    <div class="card">
+        <div class="card-header">
+            <h2>📤 Bulk Product Upload</h2>
+        </div>
+        
+        <!-- Template Downloads -->
+        <div style="background: #fffbeb; border: 2px solid #fbbf24; border-radius: 8px; padding: 20px; margin-bottom: 30px;">
+            <h3 style="color: #92400e; margin-bottom: 15px;">📥 Download Templates</h3>
+            <p style="color: #6b7280; margin-bottom: 15px;">Download a sample template to see the required format</p>
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                <button class="btn btn-sm" onclick="downloadTemplate('csv')" style="background: #10b981; color: white;">📄 CSV Template</button>
+                <button class="btn btn-sm" onclick="downloadTemplate('excel')" style="background: #10b981; color: white;">📊 Excel Template</button>
+                <button class="btn btn-sm" onclick="downloadTemplate('json')" style="background: #10b981; color: white;">📋 JSON Template</button>
+            </div>
+        </div>
+
+        <!-- Upload Tabs -->
+        <div style="display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 2px solid #e5e7eb;">
+            <button class="bulk-tab active" data-tab="csv" onclick="switchBulkTab('csv')" style="padding: 12px 24px; background: transparent; border: none; cursor: pointer; font-size: 16px; font-weight: 600; color: #6b7280; border-bottom: 3px solid transparent; transition: all 0.3s;">CSV Upload</button>
+            <button class="bulk-tab" data-tab="excel" onclick="switchBulkTab('excel')" style="padding: 12px 24px; background: transparent; border: none; cursor: pointer; font-size: 16px; font-weight: 600; color: #6b7280; border-bottom: 3px solid transparent; transition: all 0.3s;">Excel Upload</button>
+            <button class="bulk-tab" data-tab="json" onclick="switchBulkTab('json')" style="padding: 12px 24px; background: transparent; border: none; cursor: pointer; font-size: 16px; font-weight: 600; color: #6b7280; border-bottom: 3px solid transparent; transition: all 0.3s;">JSON Upload</button>
+        </div>
+
+        <!-- CSV Tab -->
+        <div id="bulk-tab-csv" class="bulk-tab-content active">
+            <div style="border: 3px dashed #d1d5db; border-radius: 12px; padding: 60px 40px; text-align: center; cursor: pointer; transition: all 0.3s; background: #f9fafb;" onclick="document.getElementById('csv-bulk-file').click()">
+                <div style="font-size: 64px; margin-bottom: 20px;">📄</div>
+                <div style="font-size: 18px; font-weight: 600; margin-bottom: 10px; color: #374151;">Click to upload CSV file</div>
+                <div style="font-size: 14px; color: #6b7280;">or drag and drop your CSV file here</div>
+            </div>
+            <input type="file" id="csv-bulk-file" accept=".csv" style="display: none;" onchange="handleBulkFileSelect(event, 'csv')">
+        </div>
+
+        <!-- Excel Tab -->
+        <div id="bulk-tab-excel" class="bulk-tab-content" style="display: none;">
+            <div style="border: 3px dashed #d1d5db; border-radius: 12px; padding: 60px 40px; text-align: center; cursor: pointer; transition: all 0.3s; background: #f9fafb;" onclick="document.getElementById('excel-bulk-file').click()">
+                <div style="font-size: 64px; margin-bottom: 20px;">📊</div>
+                <div style="font-size: 18px; font-weight: 600; margin-bottom: 10px; color: #374151;">Click to upload Excel file</div>
+                <div style="font-size: 14px; color: #6b7280;">or drag and drop your .xlsx or .xls file here</div>
+            </div>
+            <input type="file" id="excel-bulk-file" accept=".xlsx,.xls" style="display: none;" onchange="handleBulkFileSelect(event, 'excel')">
+        </div>
+
+        <!-- JSON Tab -->
+        <div id="bulk-tab-json" class="bulk-tab-content" style="display: none;">
+            <div style="border: 3px dashed #d1d5db; border-radius: 12px; padding: 60px 40px; text-align: center; cursor: pointer; transition: all 0.3s; background: #f9fafb;" onclick="document.getElementById('json-bulk-file').click()">
+                <div style="font-size: 64px; margin-bottom: 20px;">📋</div>
+                <div style="font-size: 18px; font-weight: 600; margin-bottom: 10px; color: #374151;">Click to upload JSON file</div>
+                <div style="font-size: 14px; color: #6b7280;">or drag and drop your JSON file here</div>
+            </div>
+            <input type="file" id="json-bulk-file" accept=".json" style="display: none;" onchange="handleBulkFileSelect(event, 'json')">
+        </div>
+
+        <!-- File Info -->
+        <div id="bulk-file-info" style="background: #f0fdf4; border: 2px solid #10b981; border-radius: 8px; padding: 20px; margin: 20px 0; display: none;">
+            <div id="bulk-file-name" style="font-size: 16px; font-weight: 600; color: #065f46; margin-bottom: 10px;"></div>
+            <div id="bulk-file-stats" style="font-size: 14px; color: #047857;"></div>
+            <div style="width: 100%; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; margin-top: 10px;">
+                <div id="bulk-progress-fill" style="height: 100%; background: #10b981; transition: width 0.3s; width: 0%;"></div>
+            </div>
+        </div>
+
+        <!-- Preview -->
+        <div id="bulk-preview-container" style="display: none; max-height: 400px; overflow-y: auto; margin-top: 20px;">
+            <h3 style="margin-bottom: 15px;">Preview (First 10 rows)</h3>
+            <div style="overflow-x: auto;">
+                <table id="bulk-preview-table" class="preview-table" style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                    <!-- Table will be populated by JavaScript -->
+                </table>
+            </div>
+        </div>
+
+        <!-- Upload Actions -->
+        <div id="bulk-upload-actions" style="display: none; margin-top: 20px; display: flex; gap: 12px;">
+            <button class="btn btn-success" onclick="uploadBulkProducts()">✅ Upload All Products</button>
+            <button class="btn btn-secondary" onclick="resetBulkUpload()">🔄 Reset</button>
+        </div>
+
+        <!-- Loading -->
+        <div id="bulk-loading" style="text-align: center; padding: 40px; display: none;">
+            <div style="border: 4px solid #f3f4f6; border-top: 4px solid #10b981; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 20px;"></div>
+            <p>Uploading products...</p>
+        </div>
+
+        <!-- Format Guide -->
+        <div style="background: #f7fafc; border-radius: 8px; padding: 24px; margin-top: 30px;">
+            <h3 style="margin-bottom: 15px;">📖 Format Guide</h3>
+            
+            <h4 style="margin: 15px 0 10px;">Required Fields:</h4>
+            <ul style="line-height: 2; color: #374151; margin-left: 20px;">
+                <li><strong>name</strong> - Product name (text)</li>
+                <li><strong>category_id</strong> - Category ID (number)</li>
+                <li><strong>price</strong> - Price in rupees (number)</li>
+                <li><strong>unit</strong> - Unit: kg, gram, piece, liter, dozen, bunch</li>
+                <li><strong>stock_quantity</strong> - Available stock (number)</li>
+            </ul>
+
+            <h4 style="margin: 15px 0 10px;">Optional Fields:</h4>
+            <ul style="line-height: 2; color: #374151; margin-left: 20px;">
+                <li><strong>description</strong> - Product description</li>
+                <li><strong>image_url</strong> - Main image URL</li>
+                <li><strong>image_url_2</strong> - Second image URL</li>
+                <li><strong>image_url_3</strong> - Third image URL</li>
+                <li><strong>discount_percentage</strong> - Discount % (0-100)</li>
+                <li><strong>is_available</strong> - Availability (1 or 0)</li>
+                <li><strong>is_featured</strong> - Featured product (1 or 0)</li>
+            </ul>
+        </div>
+    </div>
+</div>
         </div>
     </div>
 
@@ -821,6 +939,10 @@
             </form>
         </div>
     </div>
+
+    <!-- Bulk Upload Libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
     <script>
         const API_URL = 'https://shivimart.softgensys.com/api';
@@ -1612,6 +1734,251 @@
             document.getElementById('product-images').value = '';
             document.getElementById('image-url-input').value = '';
         }
+
+        // ============ BULK UPLOAD FUNCTIONS ============
+let bulkParsedData = [];
+
+function switchBulkTab(type) {
+    document.querySelectorAll('.bulk-tab').forEach(t => {
+        t.classList.remove('active');
+        t.style.color = '#6b7280';
+        t.style.borderBottomColor = 'transparent';
+    });
+    document.querySelectorAll('.bulk-tab-content').forEach(c => c.style.display = 'none');
+    
+    event.target.classList.add('active');
+    event.target.style.color = '#10b981';
+    event.target.style.borderBottomColor = '#10b981';
+    document.getElementById(`bulk-tab-${type}`).style.display = 'block';
+    
+    resetBulkUpload();
+}
+
+function handleBulkFileSelect(event, type) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    document.getElementById('bulk-file-info').style.display = 'block';
+    document.getElementById('bulk-file-name').textContent = `📁 ${file.name}`;
+    document.getElementById('bulk-file-stats').textContent = `Size: ${(file.size / 1024).toFixed(2)} KB`;
+    
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+        try {
+            if (type === 'csv') {
+                parseBulkCSV(e.target.result);
+            } else if (type === 'excel') {
+                parseBulkExcel(e.target.result);
+            } else if (type === 'json') {
+                parseBulkJSON(e.target.result);
+            }
+        } catch (error) {
+            alert('Failed to parse file: ' + error.message);
+        }
+    };
+    
+    if (type === 'excel') {
+        reader.readAsArrayBuffer(file);
+    } else {
+        reader.readAsText(file);
+    }
+}
+
+function parseBulkCSV(content) {
+    Papa.parse(content, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+            bulkParsedData = results.data;
+            validateAndPreviewBulk();
+        },
+        error: (error) => alert('CSV Parse Error: ' + error.message)
+    });
+}
+
+function parseBulkExcel(content) {
+    const workbook = XLSX.read(content, { type: 'array' });
+    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+    bulkParsedData = XLSX.utils.sheet_to_json(firstSheet);
+    validateAndPreviewBulk();
+}
+
+function parseBulkJSON(content) {
+    bulkParsedData = JSON.parse(content);
+    if (!Array.isArray(bulkParsedData)) {
+        throw new Error('JSON must be an array of products');
+    }
+    validateAndPreviewBulk();
+}
+
+function validateAndPreviewBulk() {
+    const validData = bulkParsedData.filter(row => 
+        row.name && row.category_id && row.price && row.unit && row.stock_quantity !== undefined
+    );
+    
+    if (validData.length > 0) {
+        showBulkPreview(validData.slice(0, 10));
+        document.getElementById('bulk-upload-actions').style.display = 'flex';
+        document.getElementById('bulk-file-stats').textContent += ` | ${validData.length} valid products`;
+    } else {
+        alert('No valid products found in file!');
+    }
+}
+
+function showBulkPreview(data) {
+    const container = document.getElementById('bulk-preview-container');
+    const table = document.getElementById('bulk-preview-table');
+    
+    if (data.length === 0) {
+        container.style.display = 'none';
+        return;
+    }
+    
+    const headers = Object.keys(data[0]);
+    let html = '<thead><tr>' + headers.map(h => `<th style="padding: 12px; text-align: left; background: #f7fafc; font-weight: 600;">${h}</th>`).join('') + '</tr></thead><tbody>';
+    
+    data.forEach(row => {
+        html += '<tr style="border-bottom: 1px solid #e5e7eb;">' + headers.map(h => `<td style="padding: 12px;">${row[h] || ''}</td>`).join('') + '</tr>';
+    });
+    
+    html += '</tbody>';
+    table.innerHTML = html;
+    container.style.display = 'block';
+}
+
+async function uploadBulkProducts() {
+    if (bulkParsedData.length === 0) {
+        alert('No data to upload');
+        return;
+    }
+    
+    if (!confirm(`Upload ${bulkParsedData.length} products?`)) return;
+    
+    document.getElementById('bulk-loading').style.display = 'block';
+    document.getElementById('bulk-upload-actions').style.display = 'none';
+    
+    let success = 0;
+    let failed = 0;
+    
+    for (let i = 0; i < bulkParsedData.length; i++) {
+        const product = bulkParsedData[i];
+        
+        const progress = ((i + 1) / bulkParsedData.length) * 100;
+        document.getElementById('bulk-progress-fill').style.width = progress + '%';
+        
+        try {
+            const response = await fetch(`${API_URL}/admin/products`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Admin-Key': ADMIN_KEY
+                },
+                body: JSON.stringify({
+                    category_id: parseInt(product.category_id),
+                    name: product.name,
+                    description: product.description || '',
+                    price: parseFloat(product.price),
+                    unit: product.unit,
+                    discount_percentage: parseFloat(product.discount_percentage) || 0,
+                    stock_quantity: parseInt(product.stock_quantity),
+                    is_available: product.is_available !== undefined ? parseInt(product.is_available) : 1,
+                    is_featured: product.is_featured !== undefined ? parseInt(product.is_featured) : 0,
+                    image_url: product.image_url || '',
+                    image_url_2: product.image_url_2 || '',
+                    image_url_3: product.image_url_3 || ''
+                })
+            });
+            
+            if (response.ok) {
+                success++;
+            } else {
+                failed++;
+            }
+        } catch (error) {
+            failed++;
+        }
+    }
+    
+    document.getElementById('bulk-loading').style.display = 'none';
+    
+    alert(`✅ Upload Complete!\n\nSuccess: ${success}\nFailed: ${failed}`);
+    
+    if (success > 0) {
+        resetBulkUpload();
+        loadProducts();
+        loadStats();
+    }
+}
+
+function resetBulkUpload() {
+    bulkParsedData = [];
+    document.getElementById('bulk-file-info').style.display = 'none';
+    document.getElementById('bulk-preview-container').style.display = 'none';
+    document.getElementById('bulk-upload-actions').style.display = 'none';
+    document.getElementById('bulk-progress-fill').style.width = '0%';
+    
+    ['csv', 'excel', 'json'].forEach(type => {
+        const input = document.getElementById(`${type}-bulk-file`);
+        if (input) input.value = '';
+    });
+}
+
+function downloadTemplate(type) {
+    const sampleData = [
+        {
+            name: 'Fresh Tomatoes',
+            category_id: 1,
+            price: 30,
+            unit: 'kg',
+            stock_quantity: 100,
+            description: 'Red ripe tomatoes',
+            image_url: 'https://example.com/tomato1.jpg',
+            image_url_2: 'https://example.com/tomato2.jpg',
+            image_url_3: '',
+            discount_percentage: 10,
+            is_available: 1,
+            is_featured: 0
+        },
+        {
+            name: 'Organic Apples',
+            category_id: 1,
+            price: 150,
+            unit: 'kg',
+            stock_quantity: 50,
+            description: 'Sweet red apples',
+            image_url: 'https://example.com/apple1.jpg',
+            image_url_2: '',
+            image_url_3: '',
+            discount_percentage: 5,
+            is_available: 1,
+            is_featured: 1
+        }
+    ];
+    
+    if (type === 'csv') {
+        const csv = Papa.unparse(sampleData);
+        downloadFile(csv, 'products_template.csv', 'text/csv');
+    } else if (type === 'excel') {
+        const ws = XLSX.utils.json_to_sheet(sampleData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Products');
+        XLSX.writeFile(wb, 'products_template.xlsx');
+    } else if (type === 'json') {
+        const json = JSON.stringify(sampleData, null, 2);
+        downloadFile(json, 'products_template.json', 'application/json');
+    }
+}
+
+function downloadFile(content, filename, type) {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+}
     </script>
 </body>
 </html>
