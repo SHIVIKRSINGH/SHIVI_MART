@@ -1847,6 +1847,70 @@ function showBulkPreview(data) {
     container.style.display = 'block';
 }
 
+// async function uploadBulkProducts() {
+//     if (bulkParsedData.length === 0) {
+//         alert('No data to upload');
+//         return;
+//     }
+    
+//     if (!confirm(`Upload ${bulkParsedData.length} products?`)) return;
+    
+//     document.getElementById('bulk-loading').style.display = 'block';
+//     document.getElementById('bulk-upload-actions').style.display = 'none';
+    
+//     let success = 0;
+//     let failed = 0;
+    
+//     for (let i = 0; i < bulkParsedData.length; i++) {
+//         const product = bulkParsedData[i];
+        
+//         const progress = ((i + 1) / bulkParsedData.length) * 100;
+//         document.getElementById('bulk-progress-fill').style.width = progress + '%';
+        
+//         try {
+//             const response = await fetch(`${API_URL}/admin/products`, {
+//                 method: 'POST',
+//                 headers: {
+//                     'Content-Type': 'application/json',
+//                     'X-Admin-Key': ADMIN_KEY
+//                 },
+//                 body: JSON.stringify({
+//                     category_id: parseInt(product.category_id),
+//                     name: product.name,
+//                     description: product.description || '',
+//                     price: parseFloat(product.price),
+//                     unit: product.unit,
+//                     discount_percentage: parseFloat(product.discount_percentage) || 0,
+//                     stock_quantity: parseInt(product.stock_quantity),
+//                     is_available: product.is_available !== undefined ? parseInt(product.is_available) : 1,
+//                     is_featured: product.is_featured !== undefined ? parseInt(product.is_featured) : 0,
+//                     image_url: product.image_url || '',
+//                     image_url_2: product.image_url_2 || '',
+//                     image_url_3: product.image_url_3 || ''
+//                 })
+//             });
+            
+//             if (response.ok) {
+//                 success++;
+//             } else {
+//                 failed++;
+//             }
+//         } catch (error) {
+//             failed++;
+//         }
+//     }
+    
+//     document.getElementById('bulk-loading').style.display = 'none';
+    
+//     alert(`✅ Upload Complete!\n\nSuccess: ${success}\nFailed: ${failed}`);
+    
+//     if (success > 0) {
+//         resetBulkUpload();
+//         loadProducts();
+//         loadStats();
+//     }
+// }
+
 async function uploadBulkProducts() {
     if (bulkParsedData.length === 0) {
         alert('No data to upload');
@@ -1860,12 +1924,31 @@ async function uploadBulkProducts() {
     
     let success = 0;
     let failed = 0;
+    let errors = [];
     
     for (let i = 0; i < bulkParsedData.length; i++) {
         const product = bulkParsedData[i];
         
         const progress = ((i + 1) / bulkParsedData.length) * 100;
         document.getElementById('bulk-progress-fill').style.width = progress + '%';
+        
+        // Prepare product data
+        const productData = {
+            category_id: parseInt(product.category_id),
+            name: product.name,
+            description: product.description || '',
+            price: parseFloat(product.price),
+            unit: product.unit,
+            discount_percentage: parseFloat(product.discount_percentage) || 0,
+            stock_quantity: parseInt(product.stock_quantity),
+            is_available: product.is_available !== undefined ? parseInt(product.is_available) : 1,
+            is_featured: product.is_featured !== undefined ? parseInt(product.is_featured) : 0,
+            image_url: product.image_url || '',
+            image_url_2: product.image_url_2 || '',
+            image_url_3: product.image_url_3 || ''
+        };
+        
+        console.log('📤 Uploading product:', productData);
         
         try {
             const response = await fetch(`${API_URL}/admin/products`, {
@@ -1874,35 +1957,40 @@ async function uploadBulkProducts() {
                     'Content-Type': 'application/json',
                     'X-Admin-Key': ADMIN_KEY
                 },
-                body: JSON.stringify({
-                    category_id: parseInt(product.category_id),
-                    name: product.name,
-                    description: product.description || '',
-                    price: parseFloat(product.price),
-                    unit: product.unit,
-                    discount_percentage: parseFloat(product.discount_percentage) || 0,
-                    stock_quantity: parseInt(product.stock_quantity),
-                    is_available: product.is_available !== undefined ? parseInt(product.is_available) : 1,
-                    is_featured: product.is_featured !== undefined ? parseInt(product.is_featured) : 0,
-                    image_url: product.image_url || '',
-                    image_url_2: product.image_url_2 || '',
-                    image_url_3: product.image_url_3 || ''
-                })
+                body: JSON.stringify(productData)
             });
+            
+            console.log('📥 Response status:', response.status);
             
             if (response.ok) {
                 success++;
+                console.log('✅ Success:', product.name);
             } else {
                 failed++;
+                const errorData = await response.json();
+                console.error('❌ Failed:', product.name, errorData);
+                errors.push(`${product.name}: ${errorData.error || errorData.message || 'Unknown error'}`);
             }
         } catch (error) {
             failed++;
+            console.error('❌ Network error:', product.name, error);
+            errors.push(`${product.name}: ${error.message}`);
         }
     }
     
     document.getElementById('bulk-loading').style.display = 'none';
     
-    alert(`✅ Upload Complete!\n\nSuccess: ${success}\nFailed: ${failed}`);
+    // Show detailed error report
+    let message = `✅ Upload Complete!\n\nSuccess: ${success}\nFailed: ${failed}`;
+    
+    if (errors.length > 0) {
+        message += '\n\nErrors:\n' + errors.slice(0, 5).join('\n');
+        if (errors.length > 5) {
+            message += `\n... and ${errors.length - 5} more errors`;
+        }
+    }
+    
+    alert(message);
     
     if (success > 0) {
         resetBulkUpload();
