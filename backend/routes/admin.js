@@ -46,13 +46,14 @@ router.post("/products", async (req, res) => {
       stock_quantity,
       is_available,
       is_featured,
+      image_url,
     } = req.body;
 
     const [result] = await db.query(
       `INSERT INTO products (
                 category_id, name, description, price, unit, 
-                discount_percentage, stock_quantity, is_available, is_featured
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                discount_percentage, stock_quantity, is_available, is_featured, image_url
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         category_id,
         name,
@@ -63,6 +64,7 @@ router.post("/products", async (req, res) => {
         stock_quantity,
         is_available ? 1 : 0,
         is_featured ? 1 : 0,
+        image_url || null,
       ],
     );
 
@@ -82,7 +84,7 @@ router.post("/products", async (req, res) => {
   }
 });
 
-// Update product
+// Update product - FIXED VERSION WITH IMAGE_URL
 router.put("/products/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -96,7 +98,12 @@ router.put("/products/:id", async (req, res) => {
       stock_quantity,
       is_available,
       is_featured,
+      image_url,
     } = req.body;
+
+    console.log("🔧 Updating product ID:", id);
+    console.log("📦 Received data:", req.body);
+    console.log("🖼️ Image URL received:", image_url);
 
     // Get current stock for comparison
     const [currentProduct] = await db.query(
@@ -111,12 +118,12 @@ router.put("/products/:id", async (req, res) => {
     const oldStock = currentProduct[0].stock_quantity;
     const stockChange = stock_quantity - oldStock;
 
-    // Update product
+    // Update product - NOW INCLUDES image_url!
     await db.query(
       `UPDATE products SET 
                 category_id = ?, name = ?, description = ?, price = ?, unit = ?,
                 discount_percentage = ?, stock_quantity = ?, 
-                is_available = ?, is_featured = ?,
+                is_available = ?, is_featured = ?, image_url = ?,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = ?`,
       [
@@ -129,9 +136,12 @@ router.put("/products/:id", async (req, res) => {
         stock_quantity,
         is_available ? 1 : 0,
         is_featured ? 1 : 0,
+        image_url || null,
         id,
       ],
     );
+
+    console.log("✅ Product updated successfully");
 
     // Record stock change if quantity changed
     if (stockChange !== 0) {
@@ -290,12 +300,12 @@ router.get("/low-stock", async (req, res) => {
 // Add category
 router.post("/categories", async (req, res) => {
   try {
-    const { name } = req.body;
-    const slug = name.toLowerCase().replace(/\s+/g, "-");
+    const { name, slug } = req.body;
+    const finalSlug = slug || name.toLowerCase().replace(/\s+/g, "-");
 
     const [result] = await db.query(
       "INSERT INTO categories (name, slug) VALUES (?, ?)",
-      [name, slug],
+      [name, finalSlug],
     );
 
     res.json({ success: true, category_id: result.insertId });
