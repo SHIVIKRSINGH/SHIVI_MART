@@ -33,7 +33,7 @@ router.get("/products", async (req, res) => {
   }
 });
 
-// Add product
+// Add product - WITH AUTO-SLUG GENERATION
 router.post("/products", async (req, res) => {
   try {
     const {
@@ -52,6 +52,16 @@ router.post("/products", async (req, res) => {
       product_images,
     } = req.body;
 
+    // Auto-generate slug from name
+    const slug = name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, "") // Remove special characters
+      .replace(/\s+/g, "-") // Replace spaces with hyphens
+      .replace(/-+/g, "-") // Replace multiple hyphens with single
+      .trim();
+
+    console.log("📝 Auto-generated slug:", slug, "from name:", name);
+
     // Handle multiple images if sent as array
     let finalImage1 = image_url || null;
     let finalImage2 = image_url_2 || null;
@@ -65,13 +75,14 @@ router.post("/products", async (req, res) => {
 
     const [result] = await db.query(
       `INSERT INTO products (
-                category_id, name, description, price, unit, 
+                category_id, name, slug, description, price, unit, 
                 discount_percentage, stock_quantity, is_available, is_featured, 
                 image_url, image_url_2, image_url_3
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         category_id,
         name,
+        slug,
         description || "",
         price,
         unit,
@@ -94,14 +105,18 @@ router.post("/products", async (req, res) => {
       [result.insertId, stock_quantity, stock_quantity, "Initial stock"],
     );
 
+    console.log("✅ Product added with ID:", result.insertId);
+
     res.json({ success: true, product_id: result.insertId });
   } catch (error) {
-    console.error("Error adding product:", error);
-    res.status(500).json({ error: "Failed to add product" });
+    console.error("❌ Error adding product:", error);
+    res
+      .status(500)
+      .json({ error: "Failed to add product", details: error.message });
   }
 });
 
-// Update product - FIXED VERSION WITH MULTIPLE IMAGES
+// Update product - FIXED VERSION WITH MULTIPLE IMAGES AND AUTO-SLUG
 router.put("/products/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -118,8 +133,16 @@ router.put("/products/:id", async (req, res) => {
       image_url,
       image_url_2,
       image_url_3,
-      product_images, // Array of images from frontend
+      product_images,
     } = req.body;
+
+    // Auto-generate slug from name
+    const slug = name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-")
+      .trim();
 
     console.log("🔧 Updating product ID:", id);
     console.log("📦 Received data:", req.body);
@@ -135,7 +158,6 @@ router.put("/products/:id", async (req, res) => {
     let finalImage2 = image_url_2 || null;
     let finalImage3 = image_url_3 || null;
 
-    // If product_images array is provided, use it
     if (product_images && Array.isArray(product_images)) {
       finalImage1 = product_images[0]?.data || null;
       finalImage2 = product_images[1]?.data || null;
@@ -160,10 +182,10 @@ router.put("/products/:id", async (req, res) => {
     const oldStock = currentProduct[0].stock_quantity;
     const stockChange = stock_quantity - oldStock;
 
-    // Update product - NOW INCLUDES ALL 3 IMAGE URLs!
+    // Update product - INCLUDES SLUG AND ALL 3 IMAGE URLs!
     await db.query(
       `UPDATE products SET 
-                category_id = ?, name = ?, description = ?, price = ?, unit = ?,
+                category_id = ?, name = ?, slug = ?, description = ?, price = ?, unit = ?,
                 discount_percentage = ?, stock_quantity = ?, 
                 is_available = ?, is_featured = ?, 
                 image_url = ?, image_url_2 = ?, image_url_3 = ?,
@@ -172,6 +194,7 @@ router.put("/products/:id", async (req, res) => {
       [
         category_id,
         name,
+        slug,
         description || "",
         price,
         unit,
