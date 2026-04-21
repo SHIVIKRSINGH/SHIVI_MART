@@ -928,6 +928,7 @@
                 <table>
                     <thead>
                         <tr>
+                            <th>Image</th>
                             <th>ID</th>
                             <th>Name</th>
                             <th>Category</th>
@@ -941,6 +942,11 @@
                     <tbody>
                         ${products.map(p => `
                             <tr>
+                                <td>
+                                    ${p.image_url ? 
+                                        `<img src="${p.image_url}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 6px;" onerror="this.src='/images/placeholder.png'">` 
+                                        : '📦'}
+                                </td>
                                 <td><strong>#${p.id}</strong></td>
                                 <td>${p.name}</td>
                                 <td>${p.category_name || 'N/A'}</td>
@@ -982,6 +988,8 @@
         }
 
         async function editProduct(product) {
+            console.log('✏️ Editing product:', product);
+            
             document.getElementById('product-modal-title').textContent = 'Edit Product';
             document.getElementById('product-id').value = product.id;
             document.getElementById('product-name').value = product.name;
@@ -995,13 +1003,19 @@
             
             // Load existing images
             clearImages();
-            if (product.image_url) {
+            
+            console.log('🖼️ Product image_url:', product.image_url);
+            
+            if (product.image_url && product.image_url.trim() !== '') {
+                console.log('✅ Loading existing image');
                 productImages.push({
-                    type: 'url',
+                    type: 'existing',
                     data: product.image_url,
                     name: 'Existing Image'
                 });
                 updateImagePreviews();
+            } else {
+                console.log('⚠️ No existing image');
             }
             
             // Load categories first, then set the value
