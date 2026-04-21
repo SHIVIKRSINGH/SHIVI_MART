@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bulk Product Upload - ShiviMart Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Include SheetJS for Excel support -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Include PapaParse for CSV support -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f5f7fa;
+            color: #1f2937;
+        }
+
+        .header {
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px 40px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            color: #10b981;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .card h2 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #1f2937;
+        }
+
+        .upload-area {
+            border: 3px dashed #d1d5db;
+            border-radius: 12px;
+            padding: 60px 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #f9fafb;
+        }
+
+        .upload-area:hover {
+            border-color: #10b981;
+            background: #f0fdf4;
+        }
+
+        .upload-area.dragover {
+            border-color: #10b981;
+            background: #d1fae5;
+        }
+
+        .upload-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        .upload-text {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #374151;
+        }
+
+        .upload-hint {
+            font-size: 14px;
+            color: #6b7280;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #059669;
+        }
+
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+
+        .btn-outline {
+            background: white;
+            color: #10b981;
+            border: 2px solid #10b981;
+        }
+
+        .btn-outline:hover {
+            background: #f0fdf4;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .file-info {
+            background: #f0fdf4;
+            border: 2px solid #10b981;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .file-info.active {
+            display: block;
+        }
+
+        .file-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #065f46;
+            margin-bottom: 10px;
+        }
+
+        .file-stats {
+            font-size: 14px;
+            color: #047857;
+        }
+
+        .preview-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        .preview-table th,
+        .preview-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .preview-table th {
+            background: #f9fafb;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .preview-table tr:hover {
+            background: #f9fafb;
+        }
+
+        .preview-container {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+
+        .alert {
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border-left: 4px solid #10b981;
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 4px solid #ef4444;
+        }
+
+        .alert-warning {
+            background: #fef3c7;
+            color: #92400e;
+            border-left: 4px solid #f59e0b;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #10b981;
+            transition: width 0.3s;
+        }
+
+        .template-section {
+            background: #fffbeb;
+            border: 2px solid #fbbf24;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .template-section h3 {
+            color: #92400e;
+            margin-bottom: 15px;
+        }
+
+        .sample-data {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            margin-top: 15px;
+        }
+
+        .validation-errors {
+            background: #fef2f2;
+            border: 2px solid #ef4444;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .validation-errors.active {
+            display: block;
+        }
+
+        .error-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #fecaca;
+        }
+
+        .error-item:last-child {
+            border-bottom: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            display: none;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #10b981;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            color: #6b7280;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab:hover {
+            color: #10b981;
+        }
+
+        .tab.active {
+            color: #10b981;
+            border-bottom-color: #10b981;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🛒 ShiviMart - Bulk Product Upload</h1>
+    </div>
+
+    <div class="container">
+        <!-- Template Downloads -->
+        <div class="template-section">
+            <h3>📥 Download Templates</h3>
+            <p style="color: #6b7280; margin-bottom: 15px;">Download a sample template to see the required format</p>
+            <div class="btn-group">
+                <button class="btn btn-outline" onclick="downloadTemplate('csv')">📄 Download CSV Template</button>
+                <button class="btn btn-outline" onclick="downloadTemplate('excel')">📊 Download Excel Template</button>
+                <button class="btn btn-outline" onclick="downloadTemplate('json')">📋 Download JSON Template</button>
+            </div>
+        </div>
+
+        <!-- Upload Section -->
+        <div class="card">
+            <h2>Upload Products</h2>
+            
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('csv')">CSV Upload</button>
+                <button class="tab" onclick="switchTab('excel')">Excel Upload</button>
+                <button class="tab" onclick="switchTab('json')">JSON Upload</button>
+            </div>
+
+            <!-- CSV Tab -->
+            <div id="tab-csv" class="tab-content active">
+                <div class="upload-area" id="csv-upload-area" onclick="document.getElementById('csv-file').click()">
+                    <div class="upload-icon">📄</div>
+                    <div class="upload-text">Click to upload CSV file</div>
+                    <div class="upload-hint">or drag and drop your CSV file here</div>
+                </div>
+                <input type="file" id="csv-file" class="file-input" accept=".csv" onchange="handleFileSelect(event, 'csv')">
+            </div>
+
+            <!-- Excel Tab -->
+            <div id="tab-excel" class="tab-content">
+                <div class="upload-area" id="excel-upload-area" onclick="document.getElementById('excel-file').click()">
+                    <div class="upload-icon">📊</div>
+                    <div class="upload-text">Click to upload Excel file</div>
+                    <div class="upload-hint">or drag and drop your .xlsx or .xls file here</div>
+                </div>
+                <input type="file" id="excel-file" class="file-input" accept=".xlsx,.xls" onchange="handleFileSelect(event, 'excel')">
+            </div>
+
+            <!-- JSON Tab -->
+            <div id="tab-json" class="tab-content">
+                <div class="upload-area" id="json-upload-area" onclick="document.getElementById('json-file').click()">
+                    <div class="upload-icon">📋</div>
+                    <div class="upload-text">Click to upload JSON file</div>
+                    <div class="upload-hint">or drag and drop your JSON file here</div>
+                </div>
+                <input type="file" id="json-file" class="file-input" accept=".json" onchange="handleFileSelect(event, 'json')">
+            </div>
+
+            <!-- File Info -->
+            <div class="file-info" id="file-info">
+                <div class="file-name" id="file-name"></div>
+                <div class="file-stats" id="file-stats"></div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Validation Errors -->
+            <div class="validation-errors" id="validation-errors">
+                <h3 style="color: #991b1b; margin-bottom: 15px;">⚠️ Validation Errors</h3>
+                <div id="error-list"></div>
+            </div>
+
+            <!-- Preview -->
+            <div class="preview-container" id="preview-container" style="display: none;">
+                <h3 style="margin-bottom: 15px;">Preview (First 10 rows)</h3>
+                <div style="overflow-x: auto;">
+                    <table class="preview-table" id="preview-table"></table>
+                </div>
+            </div>
+
+            <!-- Upload Button -->
+            <div class="btn-group" id="upload-actions" style="display: none;">
+                <button class="btn btn-primary" onclick="uploadProducts()">✅ Upload All Products</button>
+                <button class="btn btn-secondary" onclick="resetUpload()">🔄 Reset</button>
+            </div>
+
+            <!-- Loading -->
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Uploading products...</p>
+            </div>
+        </div>
+
+        <!-- Format Guide -->
+        <div class="card">
+            <h2>📖 Format Guide</h2>
+            <h3 style="margin: 20px 0 10px;">Required Fields:</h3>
+            <ul style="line-height: 2; color: #374151;">
+                <li><strong>name</strong> - Product name (text)</li>
+                <li><strong>category_id</strong> - Category ID (number)</li>
+                <li><strong>price</strong> - Price in rupees (number)</li>
+                <li><strong>unit</strong> - Unit of measurement (kg, gram, piece, liter, dozen, bunch)</li>
+                <li><strong>stock_quantity</strong> - Available stock (number)</li>
+            </ul>
+
+            <h3 style="margin: 20px 0 10px;">Optional Fields:</h3>
+            <ul style="line-height: 2; color: #374151;">
+                <li><strong>description</strong> - Product description (text)</li>
+                <li><strong>image_url</strong> - Main image URL (text)</li>
+                <li><strong>image_url_2</strong> - Second image URL (text)</li>
+                <li><strong>image_url_3</strong> - Third image URL (text)</li>
+                <li><strong>discount_percentage</strong> - Discount % (number, 0-100)</li>
+                <li><strong>is_available</strong> - Availability (1 or 0)</li>
+                <li><strong>is_featured</strong> - Featured product (1 or 0)</li>
+            </ul>
+
+            <h3 style="margin: 20px 0 10px;">Example CSV:</h3>
+            <div class="sample-data">name,category_id,price,unit,stock_quantity,description,image_url,image_url_2,image_url_3,discount_percentage,is_available,is_featured
+Fresh Tomatoes,1,30,kg,100,Red ripe tomatoes,https://example.com/tomato1.jpg,https://example.com/tomato2.jpg,,10,1,0
+Organic Apples,1,150,kg,50,Sweet red apples,https://example.com/apple1.jpg,,,5,1,1</div>
+
+            <h3 style="margin: 20px 0 10px;">Example JSON:</h3>
+            <div class="sample-data">[
+  {
+    "name": "Fresh Tomatoes",
+    "category_id": 1,
+    "price": 30,
+    "unit": "kg",
+    "stock_quantity": 100,
+    "description": "Red ripe tomatoes",
+    "image_url": "https://example.com/tomato1.jpg",
+    "image_url_2": "https://example.com/tomato2.jpg",
+    "image_url_3": "",
+    "discount_percentage": 10,
+    "is_available": 1,
+    "is_featured": 0
+  }
+]</div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'https://shivimart.softgensys.com/api';
+        const ADMIN_KEY = 'your-admin-key'; // Replace with actual admin key
+        
+        let parsedData = [];
+        let currentFileType = '';
+
+        // Tab switching
+        function switchTab(type) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(`tab-${type}`).classList.add('active');
+            
+            resetUpload();
+        }
+
+        // Drag and drop
+        ['csv', 'excel', 'json'].forEach(type => {
+            const area = document.getElementById(`${type}-upload-area`);
+            
+            area.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                area.classList.add('dragover');
+            });
+            
+            area.addEventListener('dragleave', () => {
+                area.classList.remove('dragover');
+            });
+            
+            area.addEventListener('drop', (e) => {
+                e.preventDefault();
+                area.classList.remove('dragover');
+                
+                const file = e.dataTransfer.files[0];
+                if (file) {
+                    const input = document.getElementById(`${type}-file`);
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(file);
+                    input.files = dataTransfer.files;
+                    handleFileSelect({ target: input }, type);
+                }
+            });
+        });
+
+        // Handle file selection
+        function handleFileSelect(event, type) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            currentFileType = type;
+            
+            document.getElementById('file-info').classList.add('active');
+            document.getElementById('file-name').textContent = `📁 ${file.name}`;
+            document.getElementById('file-stats').textContent = `Size: ${(file.size / 1024).toFixed(2)} KB`;
+            
+            const reader = new FileReader();
+            
+            reader.onload = (e) => {
+                try {
+                    if (type === 'csv') {
+                        parseCSV(e.target.result);
+                    } else if (type === 'excel') {
+                        parseExcel(e.target.result);
+                    } else if (type === 'json') {
+                        parseJSON(e.target.result);
+                    }
+                } catch (error) {
+                    showError('Failed to parse file: ' + error.message);
+                }
+            };
+            
+            if (type === 'excel') {
+                reader.readAsArrayBuffer(file);
+            } else {
+                reader.readAsText(file);
+            }
+        }
+
+        // Parse CSV
+        function parseCSV(content) {
+            Papa.parse(content, {
+                header: true,
+                skipEmptyLines: true,
+                complete: (results) => {
+                    parsedData = results.data;
+                    validateAndPreview();
+                },
+                error: (error) => {
+                    showError('CSV Parse Error: ' + error.message);
+                }
+            });
+        }
+
+        // Parse Excel
+        function parseExcel(content) {
+            const workbook = XLSX.read(content, { type: 'array' });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            parsedData = XLSX.utils.sheet_to_json(firstSheet);
+            validateAndPreview();
+        }
+
+        // Parse JSON
+        function parseJSON(content) {
+            parsedData = JSON.parse(content);
+            if (!Array.isArray(parsedData)) {
+                throw new Error('JSON must be an array of products');
+            }
+            validateAndPreview();
+        }
+
+        // Validate and preview
+        function validateAndPreview() {
+            const errors = [];
+            const validData = [];
+            
+            parsedData.forEach((row, index) => {
+                const rowErrors = [];
+                
+                // Required fields
+                if (!row.name || row.name.trim() === '') rowErrors.push('Missing name');
+                if (!row.category_id) rowErrors.push('Missing category_id');
+                if (!row.price || isNaN(row.price)) rowErrors.push('Invalid price');
+                if (!row.unit) rowErrors.push('Missing unit');
+                if (row.stock_quantity === undefined || isNaN(row.stock_quantity)) rowErrors.push('Invalid stock_quantity');
+                
+                // Validate unit
+                const validUnits = ['kg', 'gram', 'piece', 'liter', 'dozen', 'bunch'];
+                if (row.unit && !validUnits.includes(row.unit.toLowerCase())) {
+                    rowErrors.push(`Invalid unit: ${row.unit}`);
+                }
+                
+                if (rowErrors.length > 0) {
+                    errors.push(`Row ${index + 1}: ${rowErrors.join(', ')}`);
+                } else {
+                    validData.push(row);
+                }
+            });
+            
+            if (errors.length > 0) {
+                showValidationErrors(errors);
+            } else {
+                document.getElementById('validation-errors').classList.remove('active');
+            }
+            
+            if (validData.length > 0) {
+                showPreview(validData.slice(0, 10));
+                document.getElementById('upload-actions').style.display = 'flex';
+                document.getElementById('file-stats').textContent += ` | ${validData.length} valid products`;
+            }
+        }
+
+        // Show validation errors
+        function showValidationErrors(errors) {
+            const errorList = document.getElementById('error-list');
+            errorList.innerHTML = errors.map(err => `<div class="error-item">❌ ${err}</div>`).join('');
+            document.getElementById('validation-errors').classList.add('active');
+        }
+
+        // Show preview
+        function showPreview(data) {
+            const container = document.getElementById('preview-container');
+            const table = document.getElementById('preview-table');
+            
+            if (data.length === 0) {
+                container.style.display = 'none';
+                return;
+            }
+            
+            // Create table headers
+            const headers = Object.keys(data[0]);
+            let html = '<thead><tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr></thead><tbody>';
+            
+            // Create table rows
+            data.forEach(row => {
+                html += '<tr>' + headers.map(h => `<td>${row[h] || ''}</td>`).join('') + '</tr>';
+            });
+            
+            html += '</tbody>';
+            table.innerHTML = html;
+            container.style.display = 'block';
+        }
+
+        // Upload products
+        async function uploadProducts() {
+            if (parsedData.length === 0) {
+                alert('No data to upload');
+                return;
+            }
+            
+            if (!confirm(`Upload ${parsedData.length} products?`)) return;
+            
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('upload-actions').style.display = 'none';
+            
+            let success = 0;
+            let failed = 0;
+            
+            for (let i = 0; i < parsedData.length; i++) {
+                const product = parsedData[i];
+                
+                // Update progress
+                const progress = ((i + 1) / parsedData.length) * 100;
+                document.getElementById('progress-fill').style.width = progress + '%';
+                
+                try {
+                    const response = await fetch(`${API_URL}/admin/products`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Admin-Key': ADMIN_KEY
+                        },
+                        body: JSON.stringify({
+                            category_id: parseInt(product.category_id),
+                            name: product.name,
+                            description: product.description || '',
+                            price: parseFloat(product.price),
+                            unit: product.unit,
+                            discount_percentage: parseFloat(product.discount_percentage) || 0,
+                            stock_quantity: parseInt(product.stock_quantity),
+                            is_available: product.is_available !== undefined ? parseInt(product.is_available) : 1,
+                            is_featured: product.is_featured !== undefined ? parseInt(product.is_featured) : 0,
+                            image_url: product.image_url || '',
+                            image_url_2: product.image_url_2 || '',
+                            image_url_3: product.image_url_3 || ''
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        success++;
+                    } else {
+                        failed++;
+                        console.error('Failed to upload:', product.name);
+                    }
+                } catch (error) {
+                    failed++;
+                    console.error('Error uploading:', product.name, error);
+                }
+            }
+            
+            document.getElementById('loading').classList.remove('active');
+            
+            alert(`✅ Upload Complete!\n\nSuccess: ${success}\nFailed: ${failed}`);
+            
+            if (success > 0) {
+                resetUpload();
+            }
+        }
+
+        // Reset upload
+        function resetUpload() {
+            parsedData = [];
+            document.getElementById('file-info').classList.remove('active');
+            document.getElementById('validation-errors').classList.remove('active');
+            document.getElementById('preview-container').style.display = 'none';
+            document.getElementById('upload-actions').style.display = 'none';
+            document.getElementById('progress-fill').style.width = '0%';
+            
+            ['csv', 'excel', 'json'].forEach(type => {
+                document.getElementById(`${type}-file`).value = '';
+            });
+        }
+
+        // Download templates
+        function downloadTemplate(type) {
+            const sampleData = [
+                {
+                    name: 'Fresh Tomatoes',
+                    category_id: 1,
+                    price: 30,
+                    unit: 'kg',
+                    stock_quantity: 100,
+                    description: 'Red ripe tomatoes',
+                    image_url: 'https://example.com/tomato1.jpg',
+                    image_url_2: 'https://example.com/tomato2.jpg',
+                    image_url_3: '',
+                    discount_percentage: 10,
+                    is_available: 1,
+                    is_featured: 0
+                },
+                {
+                    name: 'Organic Apples',
+                    category_id: 1,
+                    price: 150,
+                    unit: 'kg',
+                    stock_quantity: 50,
+                    description: 'Sweet red apples',
+                    image_url: 'https://example.com/apple1.jpg',
+                    image_url_2: '',
+                    image_url_3: '',
+                    discount_percentage: 5,
+                    is_available: 1,
+                    is_featured: 1
+                },
+                {
+                    name: 'Fresh Milk',
+                    category_id: 2,
+                    price: 60,
+                    unit: 'liter',
+                    stock_quantity: 80,
+                    description: 'Full cream milk',
+                    image_url: 'https://example.com/milk.jpg',
+                    image_url_2: '',
+                    image_url_3: '',
+                    discount_percentage: 0,
+                    is_available: 1,
+                    is_featured: 0
+                }
+            ];
+            
+            if (type === 'csv') {
+                const csv = Papa.unparse(sampleData);
+                downloadFile(csv, 'products_template.csv', 'text/csv');
+            } else if (type === 'excel') {
+                const ws = XLSX.utils.json_to_sheet(sampleData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Products');
+                XLSX.writeFile(wb, 'products_template.xlsx');
+            } else if (type === 'json') {
+                const json = JSON.stringify(sampleData, null, 2);
+                downloadFile(json, 'products_template.json', 'application/json');
+            }
+        }
+
+        // Download file helper
+        function downloadFile(content, filename, type) {
+            const blob = new Blob([content], { type });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Show error
+        function showError(message) {
+            alert('Error: ' + message);
+        }
+    </script>
+</body>
+</html>
