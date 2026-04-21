@@ -47,13 +47,28 @@ router.post("/products", async (req, res) => {
       is_available,
       is_featured,
       image_url,
+      image_url_2,
+      image_url_3,
+      product_images,
     } = req.body;
+
+    // Handle multiple images if sent as array
+    let finalImage1 = image_url || null;
+    let finalImage2 = image_url_2 || null;
+    let finalImage3 = image_url_3 || null;
+
+    if (product_images && Array.isArray(product_images)) {
+      finalImage1 = product_images[0]?.data || null;
+      finalImage2 = product_images[1]?.data || null;
+      finalImage3 = product_images[2]?.data || null;
+    }
 
     const [result] = await db.query(
       `INSERT INTO products (
                 category_id, name, description, price, unit, 
-                discount_percentage, stock_quantity, is_available, is_featured, image_url
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                discount_percentage, stock_quantity, is_available, is_featured, 
+                image_url, image_url_2, image_url_3
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         category_id,
         name,
@@ -64,7 +79,9 @@ router.post("/products", async (req, res) => {
         stock_quantity,
         is_available ? 1 : 0,
         is_featured ? 1 : 0,
-        image_url || null,
+        finalImage1,
+        finalImage2,
+        finalImage3,
       ],
     );
 
@@ -84,7 +101,7 @@ router.post("/products", async (req, res) => {
   }
 });
 
-// Update product - FIXED VERSION WITH IMAGE_URL
+// Update product - FIXED VERSION WITH MULTIPLE IMAGES
 router.put("/products/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -99,11 +116,36 @@ router.put("/products/:id", async (req, res) => {
       is_available,
       is_featured,
       image_url,
+      image_url_2,
+      image_url_3,
+      product_images, // Array of images from frontend
     } = req.body;
 
     console.log("🔧 Updating product ID:", id);
     console.log("📦 Received data:", req.body);
-    console.log("🖼️ Image URL received:", image_url);
+    console.log("🖼️ Images received:", {
+      image_url,
+      image_url_2,
+      image_url_3,
+      product_images,
+    });
+
+    // Handle multiple images if sent as array
+    let finalImage1 = image_url || null;
+    let finalImage2 = image_url_2 || null;
+    let finalImage3 = image_url_3 || null;
+
+    // If product_images array is provided, use it
+    if (product_images && Array.isArray(product_images)) {
+      finalImage1 = product_images[0]?.data || null;
+      finalImage2 = product_images[1]?.data || null;
+      finalImage3 = product_images[2]?.data || null;
+      console.log(
+        "📸 Using images from array:",
+        product_images.length,
+        "images",
+      );
+    }
 
     // Get current stock for comparison
     const [currentProduct] = await db.query(
@@ -118,12 +160,13 @@ router.put("/products/:id", async (req, res) => {
     const oldStock = currentProduct[0].stock_quantity;
     const stockChange = stock_quantity - oldStock;
 
-    // Update product - NOW INCLUDES image_url!
+    // Update product - NOW INCLUDES ALL 3 IMAGE URLs!
     await db.query(
       `UPDATE products SET 
                 category_id = ?, name = ?, description = ?, price = ?, unit = ?,
                 discount_percentage = ?, stock_quantity = ?, 
-                is_available = ?, is_featured = ?, image_url = ?,
+                is_available = ?, is_featured = ?, 
+                image_url = ?, image_url_2 = ?, image_url_3 = ?,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = ?`,
       [
@@ -136,12 +179,18 @@ router.put("/products/:id", async (req, res) => {
         stock_quantity,
         is_available ? 1 : 0,
         is_featured ? 1 : 0,
-        image_url || null,
+        finalImage1,
+        finalImage2,
+        finalImage3,
         id,
       ],
     );
 
-    console.log("✅ Product updated successfully");
+    console.log(
+      "✅ Product updated successfully with",
+      [finalImage1, finalImage2, finalImage3].filter(Boolean).length,
+      "images",
+    );
 
     // Record stock change if quantity changed
     if (stockChange !== 0) {

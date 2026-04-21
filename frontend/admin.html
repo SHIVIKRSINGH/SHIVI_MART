@@ -1001,21 +1001,47 @@
             document.getElementById('product-available').checked = product.is_available;
             document.getElementById('product-featured').checked = product.is_featured;
             
-            // Load existing images
+            // Load existing images - ALL 3!
             clearImages();
             
-            console.log('🖼️ Product image_url:', product.image_url);
+            console.log('🖼️ Product images:', {
+                image_url: product.image_url,
+                image_url_2: product.image_url_2,
+                image_url_3: product.image_url_3
+            });
             
+            // Add all existing images
             if (product.image_url && product.image_url.trim() !== '') {
-                console.log('✅ Loading existing image');
+                console.log('✅ Loading image 1');
                 productImages.push({
                     type: 'existing',
                     data: product.image_url,
-                    name: 'Existing Image'
+                    name: 'Image 1'
                 });
+            }
+            
+            if (product.image_url_2 && product.image_url_2.trim() !== '') {
+                console.log('✅ Loading image 2');
+                productImages.push({
+                    type: 'existing',
+                    data: product.image_url_2,
+                    name: 'Image 2'
+                });
+            }
+            
+            if (product.image_url_3 && product.image_url_3.trim() !== '') {
+                console.log('✅ Loading image 3');
+                productImages.push({
+                    type: 'existing',
+                    data: product.image_url_3,
+                    name: 'Image 3'
+                });
+            }
+            
+            if (productImages.length > 0) {
                 updateImagePreviews();
             } else {
-                console.log('⚠️ No existing image');
+                console.log('⚠️ No existing images');
             }
             
             // Load categories first, then set the value
@@ -1037,9 +1063,10 @@
             
             const productId = document.getElementById('product-id').value;
             
-            // Use the first image as primary image_url
-            // If you have multiple images, you might need to save them differently
-            const imageUrl = productImages.length > 0 ? productImages[0].data : '';
+            // Prepare image URLs for all 3 slots
+            const image_url = productImages[0]?.data || null;
+            const image_url_2 = productImages[1]?.data || null;
+            const image_url_3 = productImages[2]?.data || null;
             
             const productData = {
                 category_id: parseInt(document.getElementById('product-category').value),
@@ -1051,12 +1078,19 @@
                 stock_quantity: parseInt(document.getElementById('product-stock').value),
                 is_available: document.getElementById('product-available').checked,
                 is_featured: document.getElementById('product-featured').checked,
-                image_url: imageUrl // This field is critical!
+                image_url: image_url,
+                image_url_2: image_url_2,
+                image_url_3: image_url_3,
+                product_images: productImages // Also send the full array
             };
             
             console.log('📤 Sending product data:', productData);
             console.log('🖼️ Images in array:', productImages.length);
-            console.log('🎯 Image URL being sent:', imageUrl ? imageUrl.substring(0, 50) + '...' : 'None');
+            console.log('🎯 Image URLs:', {
+                image_url: image_url ? image_url.substring(0, 50) + '...' : 'None',
+                image_url_2: image_url_2 ? image_url_2.substring(0, 50) + '...' : 'None',
+                image_url_3: image_url_3 ? image_url_3.substring(0, 50) + '...' : 'None'
+            });
             
             try {
                 const url = productId ? `${API_URL}/admin/products/${productId}` : `${API_URL}/admin/products`;
@@ -1078,6 +1112,25 @@
                 if (response.ok) {
                     const result = await response.json();
                     console.log('✅ Success response:', result);
+                    
+                    // Verify the saved data by fetching the product again
+                    console.log('🔄 Fetching updated product to verify...');
+                    const verifyResponse = await fetch(`${API_URL}/admin/products/${productId}`, {
+                        headers: { 'X-Admin-Key': ADMIN_KEY }
+                    });
+                    
+                    if (verifyResponse.ok) {
+                        const verifiedProduct = await verifyResponse.json();
+                        console.log('✅ Verified product data:', verifiedProduct);
+                        console.log('🖼️ Verified image_url:', verifiedProduct.product?.image_url || verifiedProduct.image_url);
+                        
+                        if (imageUrl && (verifiedProduct.product?.image_url !== imageUrl && verifiedProduct.image_url !== imageUrl)) {
+                            console.error('⚠️ WARNING: Image URL was NOT saved!');
+                            console.error('Sent:', imageUrl.substring(0, 100));
+                            console.error('Got back:', verifiedProduct.product?.image_url || verifiedProduct.image_url);
+                            alert('⚠️ Product saved but image URL may not have been updated. Please check the product.');
+                        }
+                    }
                     
                     closeModal('product-modal');
                     clearImages();
