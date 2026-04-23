@@ -819,9 +819,9 @@
                         <div class="form-group">
                             <label>Payment Method *</label>
                             <div class="payment-options">
-                                <div class="payment-option" onclick="selectPayment('cod')">💵 Cash on Delivery</div>
-                                <div class="payment-option" onclick="selectPayment('upi')">📱 UPI (via delivery)</div>
-                                <div class="payment-option" onclick="selectPayment('card')">💳 Card (via delivery)</div>
+                                <div class="payment-option" onclick="selectPayment(this,'cod')"></div>💵 Cash on Delivery</div>
+                                <div class="payment-option" onclick="selectPayment(this,'upi')"></div>📱 UPI (via delivery)</div>
+                                <div class="payment-option" onclick="selectPayment(this,'card')"></div>💳 Card (via delivery)</div>
                             </div>
                         </div>
                         <div class="cart-summary">
@@ -1264,76 +1264,148 @@
         // CHECKOUT
         // ========================================
         
-        function generateTimeSlots() {
-            const slots = [];
-            let hour = 8;
-            let minute = 30;
+        // function generateTimeSlots() {
+        //     const slots = [];
+        //     let hour = 8;
+        //     let minute = 30;
             
-            while (hour < 21 || (hour === 21 && minute <= 30)) {
-                const nextHour = minute === 30 ? hour + 1 : hour;
-                const nextMinute = minute === 30 ? 0 : 30;
+        //     while (hour < 21 || (hour === 21 && minute <= 30)) {
+        //         const nextHour = minute === 30 ? hour + 1 : hour;
+        //         const nextMinute = minute === 30 ? 0 : 30;
                 
-                const format = (h, m) => {
-                    const period = h >= 12 ? 'PM' : 'AM';
-                    const h12 = h > 12 ? h - 12 : h === 0 ? 12 : h;
-                    return `${h12}:${m.toString().padStart(2, '0')} ${period}`;
-                };
+        //         const format = (h, m) => {
+        //             const period = h >= 12 ? 'PM' : 'AM';
+        //             const h12 = h > 12 ? h - 12 : h === 0 ? 12 : h;
+        //             return `${h12}:${m.toString().padStart(2, '0')} ${period}`;
+        //         };
                 
-                slots.push(`${format(hour, minute)} - ${format(nextHour, nextMinute)}`);
+        //         slots.push(`${format(hour, minute)} - ${format(nextHour, nextMinute)}`);
                 
-                minute += 30;
-                if (minute >= 60) {
-                    minute = 0;
-                    hour++;
-                }
-            }
+        //         minute += 30;
+        //         if (minute >= 60) {
+        //             minute = 0;
+        //             hour++;
+        //         }
+        //     }
             
-            return slots;
-        }
+        //     return slots;
+        // }
 
-        document.getElementById('checkout-btn').addEventListener('click', () => {
-            if (cartItems.length === 0) {
-                showToast('Your cart is empty!', 'error');
-                return;
-            }
+function formatTime(time) {
+    const [h, m] = time.split(':');
+    const hour = parseInt(h);
+
+    const period = hour >= 12 ? 'PM' : 'AM';
+    const h12 = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+
+    return `${h12}:${m} ${period}`;
+}
+
+async function loadSlots() {
+    try {
+        const today = new Date().toISOString().split('T')[0];
+
+        const res = await apiCall(`/slots/available?date=${today}`);
+
+        const container = document.getElementById('time-slots');
+
+        const now = new Date();
+
+        container.innerHTML = res.slots.map(slot => {
+
+            const slotTime = new Date(`${today} ${slot.slot_start}`);
+            const isPast = slotTime < now;
+
+            return `
+                <div class="time-slot ${isPast ? 'disabled' : ''}"
+                     ${isPast ? '' : `onclick="selectTimeSlot(this, ${slot.id})"`}>
+                    ${formatTime(slot.slot_start)} - ${formatTime(slot.slot_end)}
+                    ${isPast ? '<small>(Expired)</small>' : ''}
+                </div>
+            `;
+        }).join('');
+
+    } catch (err) {
+        showToast('Failed to load slots', 'error');
+    }
+}
+
+//         document.getElementById('checkout-btn').addEventListener('click', () => {
+//             if (cartItems.length === 0) {
+//                 showToast('Your cart is empty!', 'error');
+//                 return;
+//             }
             
-            closeModal('cart-modal');
-            openModal('checkout-modal');
+//             closeModal('cart-modal');
+//             openModal('checkout-modal');
             
-            // Pre-fill user details from localStorage/database
-            const savedMobile = localStorage.getItem('user_mobile') || currentMobile;
-            const savedName = localStorage.getItem('user_name') || userName;
-            const savedAddress = localStorage.getItem('user_address') || userAddress;
+//             // Pre-fill user details from localStorage/database
+//             const savedMobile = localStorage.getItem('user_mobile') || currentMobile;
+//             const savedName = localStorage.getItem('user_name') || userName;
+//             const savedAddress = localStorage.getItem('user_address') || userAddress;
             
-            document.getElementById('checkout-mobile').value = savedMobile;
-            document.getElementById('checkout-name').value = savedName;
-            document.getElementById('checkout-address').value = savedAddress;
+//             document.getElementById('checkout-mobile').value = savedMobile;
+//             document.getElementById('checkout-name').value = savedName;
+//             document.getElementById('checkout-address').value = savedAddress;
             
-            // Generate time slots
-            const slotsContainer = document.getElementById('time-slots');
-            const slots = generateTimeSlots();
-            slotsContainer.innerHTML = slots.map(slot => 
-                `<div class="time-slot" onclick="selectTimeSlot('${slot}')">${slot}</div>`
-            ).join('');
+//             // Generate time slots
+//             const slotsContainer = document.getElementById('time-slots');
+//             const slots = generateTimeSlots();
+// //             slotsContainer.innerHTML = slots.map(slot => 
+// //     `<div class="time-slot" onclick="selectTimeSlot(this,'${slot}')">${slot}</div>`
+// // ).join('');
+// loadSlots();
             
+document.getElementById('checkout-btn').addEventListener('click', () => {
+    if (cartItems.length === 0) {
+        showToast('Your cart is empty!', 'error');
+        return;
+    }
+    
+    closeModal('cart-modal');
+    openModal('checkout-modal');
+    
+    // Pre-fill user details
+    const savedMobile = localStorage.getItem('user_mobile') || currentMobile;
+    const savedName = localStorage.getItem('user_name') || userName;
+    const savedAddress = localStorage.getItem('user_address') || userAddress;
+    
+    document.getElementById('checkout-mobile').value = savedMobile;
+    document.getElementById('checkout-name').value = savedName;
+    document.getElementById('checkout-address').value = savedAddress;
+    
+    // ✅ LOAD SLOTS FROM BACKEND (REPLACES generateTimeSlots)
+    loadSlots();
+    
+    // totals
+    const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    document.getElementById('checkout-subtotal').textContent = `₹${subtotal.toFixed(2)}`;
+    document.getElementById('checkout-total').textContent = `₹${subtotal.toFixed(2)}`;
+});
+
             // Update totals
             const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
             document.getElementById('checkout-subtotal').textContent = `₹${subtotal.toFixed(2)}`;
             document.getElementById('checkout-total').textContent = `₹${subtotal.toFixed(2)}`;
         });
 
-        function selectTimeSlot(slot) {
-            selectedTimeSlot = slot;
-            document.querySelectorAll('.time-slot').forEach(el => el.classList.remove('selected'));
-            event.target.classList.add('selected');
-        }
+        function selectTimeSlot(el, slot) {
+    selectedTimeSlot = slot;
+    document.querySelectorAll('.time-slot').forEach(e => e.classList.remove('selected'));
+    el.classList.add('selected');
+}
 
-        function selectPayment(method) {
-            selectedPayment = method;
-            document.querySelectorAll('.payment-option').forEach(el => el.classList.remove('selected'));
-            event.target.classList.add('selected');
-        }
+        // function selectPayment(method) {
+        //     selectedPayment = method;
+        //     document.querySelectorAll('.payment-option').forEach(el => el.classList.remove('selected'));
+        //     event.target.classList.add('selected');
+        // }
 
+        function selectPayment(el, method) {
+    selectedPayment = method;
+    document.querySelectorAll('.payment-option').forEach(e => e.classList.remove('selected'));
+    el.classList.add('selected');
+}
         document.getElementById('checkout-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -1347,20 +1419,30 @@
                 return;
             }
             
+            // const orderData = {
+            //     customer_name: document.getElementById('checkout-name').value,
+            //     mobile: document.getElementById('checkout-mobile').value,
+            //     delivery_address: document.getElementById('checkout-address').value,
+            //     delivery_time_slot: selectedTimeSlot,
+            //     payment_method: selectedPayment,
+            //     items: cartItems.map(item => ({
+            //         product_id: item.id,
+            //         quantity: item.quantity,
+            //         price: item.price
+            //     })),
+            //     total_amount: cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+            // };
             const orderData = {
-                customer_name: document.getElementById('checkout-name').value,
-                mobile: document.getElementById('checkout-mobile').value,
-                delivery_address: document.getElementById('checkout-address').value,
-                delivery_time_slot: selectedTimeSlot,
-                payment_method: selectedPayment,
-                items: cartItems.map(item => ({
-                    product_id: item.id,
-                    quantity: item.quantity,
-                    price: item.price
-                })),
-                total_amount: cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
-            };
-            
+    address_id: parseInt(localStorage.getItem('address_id')), // ✅ IMPORTANT
+    delivery_slot_id: selectedTimeSlot, // (we’ll fix below)
+    delivery_date: new Date().toISOString().split('T')[0],
+    payment_method: selectedPayment,
+    items: cartItems.map(item => ({
+        product_id: item.id,
+        quantity: item.quantity
+    }))
+};
+
             try {
                 const response = await apiCall('/orders', 'POST', orderData);
                 

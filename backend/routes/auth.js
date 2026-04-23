@@ -225,7 +225,7 @@ const authMiddleware = (req, res, next) => {
 router.get("/me", authMiddleware, async (req, res) => {
   try {
     const [users] = await db.query(
-      "SELECT id, mobile, name, email, created_at FROM users WHERE id = ?",
+      "SELECT id, mobile, name, email, default_address, created_at FROM users WHERE id = ?",
       [req.userId],
     );
 
@@ -244,13 +244,12 @@ router.get("/me", authMiddleware, async (req, res) => {
 // Update user profile
 router.put("/profile", authMiddleware, async (req, res) => {
   try {
-    const { name, email } = req.body;
+    const { name, email, address } = req.body;
 
-    await db.query("UPDATE users SET name = ?, email = ? WHERE id = ?", [
-      name,
-      email,
-      req.userId,
-    ]);
+    await db.query(
+      "UPDATE users SET name = ?, email = ?, default_address = ? WHERE id = ?",
+      [name, email || null, address || null, req.userId],
+    );
 
     res.json({ success: true, message: "Profile updated successfully" });
   } catch (error) {

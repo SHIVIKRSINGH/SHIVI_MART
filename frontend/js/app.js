@@ -213,8 +213,49 @@ class App {
     }
   }
 
+  // async handleAddressSubmit(e) {
+  //   e.preventDefault();
+
+  //   const addressData = {
+  //     society_id: parseInt(document.getElementById("society-select").value),
+  //     tower_no: document.getElementById("tower-input").value.trim() || null,
+  //     flat_no: document.getElementById("flat-input").value.trim(),
+  //     landmark: document.getElementById("landmark-input").value.trim() || null,
+  //     is_default: true,
+  //   };
+
+  //   if (!addressData.society_id || !addressData.flat_no) {
+  //     Utils.showToast("Please fill required fields", "error");
+  //     return;
+  //   }
+
+  //   try {
+  //     const btn = e.target.querySelector('button[type="submit"]');
+  //     btn.disabled = true;
+  //     btn.textContent = "Saving...";
+
+  //     // Save to database - uses token automatically
+  //     await API.societies.addAddress(addressData);
+
+  //     console.log("✅ Address saved to database");
+
+  //     Utils.showToast("Address saved!", "success");
+  //     await this.loadMainScreen();
+
+  //     btn.disabled = false;
+  //     btn.textContent = "Continue Shopping";
+  //   } catch (error) {
+  //     console.error("Address save error:", error);
+  //     Utils.showToast(error.message || "Failed to save address", "error");
+  //     e.target.querySelector('button[type="submit"]').disabled = false;
+  //     e.target.querySelector('button[type="submit"]').textContent =
+  //       "Continue Shopping";
+  //   }
+  // }
   async handleAddressSubmit(e) {
     e.preventDefault();
+
+    const name = document.getElementById("name-input").value.trim();
 
     const addressData = {
       society_id: parseInt(document.getElementById("society-select").value),
@@ -224,32 +265,30 @@ class App {
       is_default: true,
     };
 
-    if (!addressData.society_id || !addressData.flat_no) {
-      Utils.showToast("Please fill required fields", "error");
+    if (!name || !addressData.society_id || !addressData.flat_no) {
+      Utils.showToast("Please fill all required fields", "error");
       return;
     }
 
     try {
-      const btn = e.target.querySelector('button[type="submit"]');
-      btn.disabled = true;
-      btn.textContent = "Saving...";
-
-      // Save to database - uses token automatically
       await API.societies.addAddress(addressData);
 
-      console.log("✅ Address saved to database");
+      // ✅ SAVE NAME + ADDRESS IN USERS TABLE
+      const fullAddress = `Flat ${addressData.flat_no}, Tower ${addressData.tower_no || ""}`;
 
-      Utils.showToast("Address saved!", "success");
+      await API.request("/auth/profile", {
+        method: "PUT",
+        body: JSON.stringify({
+          name: name,
+          address: fullAddress,
+        }),
+      });
+
+      Utils.showToast("Profile saved!", "success");
       await this.loadMainScreen();
-
-      btn.disabled = false;
-      btn.textContent = "Continue Shopping";
     } catch (error) {
-      console.error("Address save error:", error);
-      Utils.showToast(error.message || "Failed to save address", "error");
-      e.target.querySelector('button[type="submit"]').disabled = false;
-      e.target.querySelector('button[type="submit"]').textContent =
-        "Continue Shopping";
+      console.error(error);
+      Utils.showToast(error.message || "Failed to save", "error");
     }
   }
 
@@ -411,48 +450,110 @@ class App {
     Utils.showModal("cart-modal");
   }
 
+  // async showCheckoutModal() {
+  //   Utils.hideModal("cart-modal");
+  //   Utils.showModal("checkout-modal");
+
+  //   const dateInput = document.getElementById("delivery-date");
+  //   dateInput.min = Utils.getTomorrowDate();
+  //   dateInput.value = Utils.getTomorrowDate();
+
+  //   await this.loadDeliverySlots(Utils.getTomorrowDate());
+
+  //   document.getElementById("final-total").textContent = Utils.formatPrice(
+  //     cart.getTotal(),
+  //   );
+  // }
+
   async showCheckoutModal() {
     Utils.hideModal("cart-modal");
     Utils.showModal("checkout-modal");
 
-    const dateInput = document.getElementById("delivery-date");
-    dateInput.min = Utils.getTomorrowDate();
-    dateInput.value = Utils.getTomorrowDate();
+    try {
+      const profile = await API.auth.getProfile();
 
-    await this.loadDeliverySlots(Utils.getTomorrowDate());
+      document.getElementById("checkout-name").value =
+        profile.user.name || "Guest";
+
+      document.getElementById("checkout-address").value =
+        profile.user.default_address || "No address";
+    } catch (err) {
+      Utils.showToast("Failed to load profile", "error");
+    }
 
     document.getElementById("final-total").textContent = Utils.formatPrice(
       cart.getTotal(),
     );
+
+    const dateInput = document.getElementById("delivery-date");
+    dateInput.min = Utils.getTodayDate();
+    dateInput.value = Utils.getTodayDate();
+
+    await this.loadDeliverySlots(dateInput.value);
   }
+
+  // async loadDeliverySlots(date) {
+  //   try {
+  //     const response = await API.slots.getAvailable(date);
+  //     const container = document.getElementById("slots-container");
+
+  //     if (!response.slots || response.slots.length === 0) {
+  //       container.innerHTML = "<p>No slots available for this date</p>";
+  //       return;
+  //     }
+
+  //     container.innerHTML = response.slots
+  //       .map(
+  //         (slot, index) => `
+  //               <div class="slot-option ${index === 0 ? "selected" : ""}"
+  //                    data-slot-id="${slot.id}"
+  //                    onclick="app.selectSlot(${slot.id})">
+  //                   ${Utils.formatTime(slot.slot_start)} - ${Utils.formatTime(slot.slot_end)}
+  //                   <small>(${slot.available_slots} slots available)</small>
+  //               </div>
+  //           `,
+  //       )
+  //       .join("");
+
+  //     this.selectedSlot = response.slots[0].id;
+  //   } catch (error) {
+  //     console.error("Failed to load delivery slots:", error);
+  //     Utils.showToast("Failed to load delivery slots", "error");
+  //   }
+  // }
 
   async loadDeliverySlots(date) {
     try {
       const response = await API.slots.getAvailable(date);
       const container = document.getElementById("slots-container");
 
-      if (!response.slots || response.slots.length === 0) {
-        container.innerHTML = "<p>No slots available for this date</p>";
-        return;
-      }
+      const now = new Date();
 
       container.innerHTML = response.slots
-        .map(
-          (slot, index) => `
-                <div class="slot-option ${index === 0 ? "selected" : ""}" 
-                     data-slot-id="${slot.id}"
-                     onclick="app.selectSlot(${slot.id})">
-                    ${Utils.formatTime(slot.slot_start)} - ${Utils.formatTime(slot.slot_end)}
-                    <small>(${slot.available_slots} slots available)</small>
-                </div>
-            `,
-        )
+        .map((slot) => {
+          const slotTime = new Date(`${date} ${slot.slot_start}`);
+          const isPast = slotTime < now;
+
+          return `
+        <div class="slot-option ${isPast ? "disabled" : ""}"
+             ${isPast ? "" : `onclick="app.selectSlot(${slot.id})"`}>
+          ${Utils.formatTime(slot.slot_start)} - ${Utils.formatTime(slot.slot_end)}
+          ${isPast ? "<small>(Expired)</small>" : ""}
+        </div>
+      `;
+        })
         .join("");
 
-      this.selectedSlot = response.slots[0].id;
+      const validSlot = response.slots.find((s) => {
+        const slotTime = new Date(`${date} ${s.slot_start}`);
+        return slotTime > now;
+      });
+
+      if (validSlot) {
+        this.selectedSlot = validSlot.id;
+      }
     } catch (error) {
-      console.error("Failed to load delivery slots:", error);
-      Utils.showToast("Failed to load delivery slots", "error");
+      Utils.showToast("Failed to load slots", "error");
     }
   }
 
@@ -466,6 +567,49 @@ class App {
       .classList.add("selected");
   }
 
+  // async placeOrder() {
+  //   if (!this.selectedSlot) {
+  //     Utils.showToast("Please select a delivery slot", "error");
+  //     return;
+  //   }
+
+  //   const deliveryDate = document.getElementById("delivery-date").value;
+  //   const paymentMethod = document.querySelector(
+  //     'input[name="payment"]:checked',
+  //   ).value;
+
+  //   try {
+  //     const addresses = await API.societies.getMyAddresses();
+
+  //     if (!addresses.addresses || addresses.addresses.length === 0) {
+  //       Utils.showToast("No delivery address found", "error");
+  //       return;
+  //     }
+
+  //     const orderData = {
+  //       address_id: addresses.addresses[0].id,
+  //       delivery_slot_id: this.selectedSlot,
+  //       delivery_date: deliveryDate,
+  //       items: cart.getOrderItems(),
+  //       payment_method: paymentMethod,
+  //     };
+
+  //     const response = await API.orders.create(orderData);
+
+  //     Utils.showToast("Order placed successfully! 🎉", "success");
+  //     Utils.hideModal("checkout-modal");
+  //     cart.clear();
+  //     this.renderProducts();
+
+  //     alert(
+  //       `Order #${response.order.order_number} placed!\nTotal: ${Utils.formatPrice(response.order.total_amount)}`,
+  //     );
+  //   } catch (error) {
+  //     console.error("Order placement error:", error);
+  //     Utils.showToast(error.message || "Failed to place order", "error");
+  //   }
+  // }
+
   async placeOrder() {
     if (!this.selectedSlot) {
       Utils.showToast("Please select a delivery slot", "error");
@@ -475,13 +619,18 @@ class App {
     const deliveryDate = document.getElementById("delivery-date").value;
     const paymentMethod = document.querySelector(
       'input[name="payment"]:checked',
-    ).value;
+    )?.value;
+
+    if (!paymentMethod) {
+      Utils.showToast("Select payment method", "error");
+      return;
+    }
 
     try {
       const addresses = await API.societies.getMyAddresses();
 
       if (!addresses.addresses || addresses.addresses.length === 0) {
-        Utils.showToast("No delivery address found", "error");
+        Utils.showToast("No address found", "error");
         return;
       }
 
@@ -493,19 +642,18 @@ class App {
         payment_method: paymentMethod,
       };
 
-      const response = await API.orders.create(orderData);
+      console.log("🚀 ORDER:", orderData);
 
-      Utils.showToast("Order placed successfully! 🎉", "success");
+      await API.orders.create(orderData);
+
+      Utils.showToast("Order placed 🎉", "success");
       Utils.hideModal("checkout-modal");
+
       cart.clear();
       this.renderProducts();
-
-      alert(
-        `Order #${response.order.order_number} placed!\nTotal: ${Utils.formatPrice(response.order.total_amount)}`,
-      );
     } catch (error) {
-      console.error("Order placement error:", error);
-      Utils.showToast(error.message || "Failed to place order", "error");
+      console.error(error);
+      Utils.showToast(error.message || "Order failed", "error");
     }
   }
 
