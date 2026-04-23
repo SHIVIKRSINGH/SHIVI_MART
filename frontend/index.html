@@ -610,6 +610,30 @@
             border-left-color: var(--danger);
         }
 
+        .payment-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.payment-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.payment-option input {
+    transform: scale(1.2);
+}
+
+.payment-option:hover {
+    border-color: #10b981;
+}
+
         @keyframes slideIn {
             from {
                 transform: translateX(400px);
@@ -817,13 +841,27 @@
                             <div class="time-slots" id="time-slots"></div>
                         </div>
                         <div class="form-group">
-                            <label>Payment Method *</label>
-                            <div class="payment-options">
-                                <div class="payment-option" onclick="selectPayment(this,'cod')"></div>💵 Cash on Delivery</div>
-                                <div class="payment-option" onclick="selectPayment(this,'upi')"></div>📱 UPI (via delivery)</div>
-                                <div class="payment-option" onclick="selectPayment(this,'card')"></div>💳 Card (via delivery)</div>
-                            </div>
-                        </div>
+    <label>Payment Method *</label>
+
+    <div class="payment-options">
+
+        <label class="payment-option">
+            <input type="radio" name="payment" value="cod" checked>
+            💵 Cash on Delivery
+        </label>
+
+        <label class="payment-option">
+            <input type="radio" name="payment" value="upi">
+            📱 UPI (via delivery)
+        </label>
+
+        <label class="payment-option">
+            <input type="radio" name="payment" value="card">
+            💳 Card (via delivery)
+        </label>
+
+    </div>
+</div>
                         <div class="cart-summary">
                             <div class="summary-row">
                                 <span>Subtotal:</span>
@@ -1347,15 +1385,19 @@ async function loadSlots() {
         const today = new Date().toISOString().split('T')[0];
 
         const res = await apiCall(`/slots/available?date=${today}`);
-
         const container = document.getElementById('time-slots');
 
         const now = new Date();
 
         container.innerHTML = res.slots.map(slot => {
 
-            const slotTime = new Date(`${today} ${slot.slot_start}`);
-            const isPast = slotTime < now;
+            // 🔥 FIX: manual time parsing
+            const [hours, minutes] = slot.slot_start.split(':');
+
+            const slotDateTime = new Date();
+            slotDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+            const isPast = slotDateTime < now;
 
             return `
                 <div class="time-slot ${isPast ? 'disabled' : ''}"
@@ -1365,8 +1407,12 @@ async function loadSlots() {
                 </div>
             `;
         }).join('');
-
+const firstAvailable = document.querySelector('.time-slot:not(.disabled)');
+if (firstAvailable) {
+    firstAvailable.click();
+}
     } catch (err) {
+        console.error(err);
         showToast('Failed to load slots', 'error');
     }
 }
