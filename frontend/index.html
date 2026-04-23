@@ -1369,7 +1369,7 @@ async function loadUserAddress() {
             
         //     return slots;
         // }
-const paymentMethod = document.querySelector('input[name="payment"]:checked')?.value;
+
 function formatTime(time) {
     const [h, m] = time.split(':');
     const hour = parseInt(h);
@@ -1519,16 +1519,16 @@ document.getElementById('checkout-btn').addEventListener('click', () => {
             //     })),
             //     total_amount: cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
             // };
-            const orderData = {
-    address_id: parseInt(localStorage.getItem('address_id')), // ✅ IMPORTANT
-    delivery_slot_id: selectedTimeSlot, // (we’ll fix below)
-    delivery_date: new Date().toISOString().split('T')[0],
-    payment_method: selectedPayment,
-    items: cartItems.map(item => ({
-        product_id: item.id,
-        quantity: item.quantity
-    }))
-};
+                const orderData = {
+                    address_id: parseInt(localStorage.getItem('address_id')), // ✅ IMPORTANT
+                    delivery_slot_id: selectedTimeSlot, // (we’ll fix below)
+                    delivery_date: new Date().toISOString().split('T')[0],
+                    payment_method: selectedPayment,
+                    items: cartItems.map(item => ({
+                        product_id: item.id,
+                        quantity: item.quantity
+                    }))
+            };
 
             try {
                 const response = await apiCall('/orders', 'POST', orderData);
