@@ -1046,44 +1046,59 @@
         }
 
         document.getElementById('address-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            userName = document.getElementById('name-input').value.trim();
-            const societyId = parseInt(document.getElementById('society-select').value);
-            const towerNo = document.getElementById('tower-input').value.trim() || null;
-            const flatNo = document.getElementById('flat-input').value.trim();
-            const landmark = document.getElementById('landmark-input').value.trim() || null;
-            
-            try {
-                // Save to database
-                await apiCall(`/users/${userId}`, 'PUT', {
-                    name: userName,
-                    society_id: societyId,
-                    tower_no: towerNo,
-                    flat_no: flatNo,
-                    landmark: landmark
-                });
-                
-                // Build address string
-                const societyName = document.querySelector(`#society-select option[value="${societyId}"]`).textContent;
-                const addrParts = [`Flat ${flatNo}`];
-                if (towerNo) addrParts.push(`Tower ${towerNo}`);
-                addrParts.push(societyName);
-                if (landmark) addrParts.push(landmark);
-                userAddress = addrParts.join(', ');
-                
-                // Save to localStorage
-                localStorage.setItem('user_name', userName);
-                localStorage.setItem('user_address', userAddress);
-                
-                showToast('Profile saved!', 'success');
-                showScreen('main-screen');
-                loadProducts();
-            } catch (err) {
-                showToast(err.message, 'error');
-            }
+    e.preventDefault();
+    
+    userName = document.getElementById('name-input').value.trim();
+    const societyId = parseInt(document.getElementById('society-select').value);
+    const towerNo = document.getElementById('tower-input').value.trim() || null;
+    const flatNo = document.getElementById('flat-input').value.trim();
+    const landmark = document.getElementById('landmark-input').value.trim() || null;
+    
+    try {
+        // ✅ 1. SAVE ADDRESS (correct API)
+        const addressRes = await apiCall('/societies/address', 'POST', {
+            society_id: societyId,
+            tower_no: towerNo,
+            flat_no: flatNo,
+            landmark: landmark,
+            is_default: true
         });
 
+        // ✅ 2. SAVE USER NAME
+        await apiCall('/auth/profile', 'PUT', {
+            name: userName
+        });
+
+        // ✅ 3. BUILD ADDRESS STRING (UI only)
+        const societyName = document.querySelector(
+            `#society-select option[value="${societyId}"]`
+        ).textContent;
+
+        const addrParts = [`Flat ${flatNo}`];
+        if (towerNo) addrParts.push(`Tower ${towerNo}`);
+        addrParts.push(societyName);
+        if (landmark) addrParts.push(landmark);
+
+        userAddress = addrParts.join(', ');
+
+        // ✅ 4. SAVE TO LOCAL STORAGE
+        localStorage.setItem('user_name', userName);
+        localStorage.setItem('user_address', userAddress);
+
+        // 🔥 VERY IMPORTANT (used in checkout)
+        if (addressRes.address_id) {
+            localStorage.setItem('address_id', addressRes.address_id);
+        }
+
+        showToast('Profile saved!', 'success');
+        showScreen('main-screen');
+        loadProducts();
+
+    } catch (err) {
+        console.error(err);
+        showToast(err.message, 'error');
+    }
+});
         // ========================================
         // PRODUCTS
         // ========================================
