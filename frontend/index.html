@@ -1369,7 +1369,7 @@ async function loadUserAddress() {
             
         //     return slots;
         // }
-
+const paymentMethod = document.querySelector('input[name="payment"]:checked')?.value;
 function formatTime(time) {
     const [h, m] = time.split(':');
     const hour = parseInt(h);
