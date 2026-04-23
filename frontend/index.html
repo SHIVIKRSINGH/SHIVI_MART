@@ -917,6 +917,32 @@
             document.getElementById(id).classList.remove('active');
         }
 
+        // =======================
+// LOAD USER ADDRESS (ADD HERE)
+// =======================
+async function loadUserAddress() {
+    try {
+        const res = await apiCall('/societies/my-addresses');
+
+        if (res.addresses && res.addresses.length > 0) {
+            const addr = res.addresses.find(a => a.is_default) || res.addresses[0];
+
+            userAddress = `Flat ${addr.flat_no}, ${addr.tower_no || ''}, ${addr.society_name}`;
+
+            localStorage.setItem('user_address', userAddress);
+            localStorage.setItem('address_id', addr.id);
+
+            return true;
+        }
+
+        return false;
+
+    } catch (err) {
+        console.error(err);
+        return false;
+    }
+}
+
         async function apiCall(endpoint, method = 'GET', data = null) {
             const headers = {
                 'Content-Type': 'application/json'
@@ -1580,33 +1606,69 @@ document.getElementById('checkout-btn').addEventListener('click', () => {
                 authToken = savedToken;
                 userId = localStorage.getItem('user_id');
                 
-                try {
-                    // Fetch latest user details from database
-                    const userInfo = await apiCall(`/users/${userId}`);
+                // try {
+                //     // Fetch latest user details from database
+                //     const userInfo = await apiCall(`/users/${userId}`);
                     
-                    if (userInfo.user && userInfo.user.name) {
-                        userName = userInfo.user.name;
-                        localStorage.setItem('user_name', userName);
+                //     if (userInfo.user && userInfo.user.name) {
+                //         userName = userInfo.user.name;
+                //         localStorage.setItem('user_name', userName);
                         
-                        // Build address from database
-                        const addrParts = [];
-                        if (userInfo.user.flat_no) addrParts.push('Flat ' + userInfo.user.flat_no);
-                        if (userInfo.user.tower_no) addrParts.push('Tower ' + userInfo.user.tower_no);
-                        if (userInfo.user.society_name) addrParts.push(userInfo.user.society_name);
-                        if (userInfo.user.landmark) addrParts.push(userInfo.user.landmark);
-                        userAddress = addrParts.join(', ');
-                        localStorage.setItem('user_address', userAddress);
+                //         // Build address from database
+                //         const addrParts = [];
+                //         if (userInfo.user.flat_no) addrParts.push('Flat ' + userInfo.user.flat_no);
+                //         if (userInfo.user.tower_no) addrParts.push('Tower ' + userInfo.user.tower_no);
+                //         if (userInfo.user.society_name) addrParts.push(userInfo.user.society_name);
+                //         if (userInfo.user.landmark) addrParts.push(userInfo.user.landmark);
+                //         userAddress = addrParts.join(', ');
+                //         localStorage.setItem('user_address', userAddress);
                         
-                        showScreen('main-screen');
-                        loadProducts();
-                    } else {
-                        loadSocieties();
-                        showScreen('address-screen');
-                    }
-                } catch (err) {
-                    loadSocieties();
-                    showScreen('address-screen');
-                }
+                //         showScreen('main-screen');
+                //         loadProducts();
+                //     } else {
+                //         loadSocieties();
+                //         showScreen('address-screen');
+                //     }
+                // } catch (err) {
+                //     loadSocieties();
+                //     showScreen('address-screen');
+                // }
+
+                try {
+    // ✅ 1. Get user profile
+    const profile = await apiCall('/auth/me');
+
+    if (profile.user && profile.user.name) {
+        userName = profile.user.name;
+        localStorage.setItem('user_name', userName);
+    }
+
+    // ✅ 2. Get addresses
+    const res = await apiCall('/societies/my-addresses');
+
+    if (res.addresses && res.addresses.length > 0) {
+        const addr = res.addresses.find(a => a.is_default) || res.addresses[0];
+
+        userAddress = `Flat ${addr.flat_no}, ${addr.tower_no || ''}, ${addr.society_name}`;
+
+        localStorage.setItem('user_address', userAddress);
+        localStorage.setItem('address_id', addr.id);
+
+        // ✅ GO TO MAIN SCREEN
+        showScreen('main-screen');
+        loadProducts();
+
+    } else {
+        // ❌ NO ADDRESS → show form
+        loadSocieties();
+        showScreen('address-screen');
+    }
+
+} catch (err) {
+    console.error(err);
+    loadSocieties();
+    showScreen('address-screen');
+}
             } else {
                 showScreen('login-screen');
             }
