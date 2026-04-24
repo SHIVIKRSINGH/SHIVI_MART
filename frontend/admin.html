@@ -1205,20 +1205,50 @@
             //     image_url_3: image_url_3,
             //     product_images: productImages // Also send the full array
             // };
-            const productData = {
-    category_id: parseInt(product.category_id),
-    name: product.name,
-    slug: product.slug || product.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
-    description: product.description || '',
-    price: parseFloat(product.price),
-    unit: product.unit,
-    discount_percentage: parseFloat(product.discount_percentage) || 0,
-    stock_quantity: parseInt(product.stock_quantity),
-    is_available: product.is_available !== undefined ? parseInt(product.is_available) : 1,
-    is_featured: product.is_featured !== undefined ? parseInt(product.is_featured) : 0,
-    image_url: product.image_url || '',
-    image_url_2: product.image_url_2 || '',
-    image_url_3: product.image_url_3 || ''
+//             const productData = {
+//     category_id: parseInt(product.category_id),
+    
+//     name: product.name,
+//     slug: product.slug || product.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+//     description: product.description || '',
+//     price: parseFloat(product.price),
+//     unit: product.unit,
+//     discount_percentage: parseFloat(product.discount_percentage) || 0,
+//     stock_quantity: parseInt(product.stock_quantity),
+//     is_available: product.is_available !== undefined ? parseInt(product.is_available) : 1,
+//     is_featured: product.is_featured !== undefined ? parseInt(product.is_featured) : 0,
+//     image_url: product.image_url || '',
+//     image_url_2: product.image_url_2 || '',
+//     image_url_3: product.image_url_3 || ''
+// };
+
+const productData = {
+    category_id: parseInt(document.getElementById('product-category').value),
+
+    name: document.getElementById('product-name').value,
+    slug: document.getElementById('product-name').value
+        .toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]/g, ''),
+
+    description: document.getElementById('product-description').value || '',
+
+    price: parseFloat(document.getElementById('product-price').value),
+
+    unit: document.getElementById('product-unit').value,
+
+    discount_percentage: parseFloat(document.getElementById('product-discount').value) || 0,
+
+    stock_quantity: parseInt(document.getElementById('product-stock').value),
+
+    is_available: document.getElementById('product-available').checked ? 1 : 0,
+
+    is_featured: document.getElementById('product-featured').checked ? 1 : 0,
+
+    // ✅ images from your array
+    image_url: productImages[0]?.data || '',
+    image_url_2: productImages[1]?.data || '',
+    image_url_3: productImages[2]?.data || ''
 };
 
 
