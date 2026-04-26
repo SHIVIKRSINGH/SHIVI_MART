@@ -158,27 +158,37 @@
         }
 
         .header {
-            background: white;
-            border-bottom: 1px solid var(--border);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(10px);
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    border-bottom: none;
+}
 
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 16px 20px;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
+.header-content {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+}
 
-        .header h1 {
-            font-size: 24px;
-            color: var(--primary);
-        }
+.header h1 {
+    font-size: 22px;
+    color: white;
+}
+/* SEARCH BAR IN HEADER */
+.header-search {
+    width: 100%;
+}
+
+.header-search input {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+}
+
 
         .cart-btn {
             background: var(--primary);
@@ -353,6 +363,42 @@
             min-width: 30px;
             text-align: center;
         }
+
+        /* PRODUCT CARD UPGRADE */
+.product-card {
+    transition: 0.2s ease;
+}
+
+.product-card:hover {
+    transform: translateY(-4px);
+}
+
+/* BADGE */
+.product-card::before {
+    content: "Fresh";
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: #10b981;
+    color: white;
+    font-size: 11px;
+    padding: 4px 6px;
+    border-radius: 6px;
+}
+
+/* FLOATING CART */
+.floating-cart {
+    position: fixed;
+    bottom: 80px;
+    right: 16px;
+    background: #10b981;
+    color: white;
+    padding: 14px;
+    border-radius: 50%;
+    font-size: 20px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+    z-index: 999;
+}
 
         .bottom-nav {
             position: fixed;
@@ -634,6 +680,34 @@
     border-color: #10b981;
 }
 
+/* HERO */
+.hero-slider {
+    margin: 10px;
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.slides {
+    display: flex;
+    animation: slide 9s infinite;
+}
+
+.slide {
+    min-width: 100%;
+    padding: 20px;
+    text-align: center;
+    background: linear-gradient(135deg,#10b981,#059669);
+    color: white;
+    font-weight: bold;
+}
+
+@keyframes slide {
+    0%{transform:translateX(0)}
+    33%{transform:translateX(-100%)}
+    66%{transform:translateX(-200%)}
+    100%{transform:translateX(0)}
+}
+
         @keyframes slideIn {
             from {
                 transform: translateX(400px);
@@ -732,7 +806,7 @@
 
         <!-- Main Screen -->
         <div id="main-screen" class="screen">
-            <header class="header">
+            <!-- <header class="header">
                 <div class="header-content">
                     <h1>🛒 ShiviMart</h1>
                     <button id="cart-btn" class="cart-btn">
@@ -740,11 +814,35 @@
                         <span id="cart-count">0</span>
                     </button>
                 </div>
-            </header>
+            </header> -->
+
+            <header class="header">
+    <div class="header-content">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h1>🛒 ShiviMart</h1>
+
+            <button id="cart-btn" class="cart-btn">
+                🛒
+                <span id="cart-count">0</span>
+            </button>
+        </div>
+
+        <div class="header-search">
+            <input type="search" id="search-input" placeholder="Search fruits, vegetables...">
+        </div>
+    </div>
+</header>
 
             <div class="pages-wrapper">
                 <!-- Home Page -->
                 <div id="page-home" class="page active">
+                    <div class="hero-slider">
+    <div class="slides">
+        <div class="slide">🌿 Farm Fresh Vegetables</div>
+        <div class="slide">⚡ Delivery in 30 mins</div>
+        <div class="slide">🔥 Best Deals Today</div>
+    </div>
+</div>
                     <div class="categories" id="categories-container"></div>
                     <div class="container">
                         <div class="products-header">
@@ -843,7 +941,7 @@
                         <div class="form-group">
     <label>Payment Method *</label>
 
-    <div class="payment-options">
+    <!-- <div class="payment-options">
 
         <label class="payment-option">
             <input type="radio" name="payment" value="cod" checked>
@@ -860,7 +958,22 @@
             💳 Card (via delivery)
         </label>
 
-    </div>
+    </div> -->
+    <div class="payment-options">
+
+<label class="payment-option" onclick="selectPayment(this,'cod')">
+<input type="radio" name="payment"> 💵 Cash on Delivery
+</label>
+
+<label class="payment-option" onclick="selectPayment(this,'upi')">
+<input type="radio" name="payment"> 📱 UPI (via delivery)
+</label>
+
+<label class="payment-option" onclick="selectPayment(this,'card')">
+<input type="radio" name="payment"> 💳 Card (via delivery)
+</label>
+
+</div>
 </div>
                         <div class="cart-summary">
                             <div class="summary-row">
@@ -898,6 +1011,9 @@
 
     <!-- Toast Container -->
     <div id="toast-container"></div>
+    <div class="floating-cart" onclick="openModal('cart-modal')">
+    🛒
+</div>
 
     <script>
         // ========================================
@@ -1201,7 +1317,15 @@ async function loadUserAddress() {
             
             if (products.length === 0) {
                 container.innerHTML = '<div class="empty-state"><p>No products found</p></div>';
-                return;
+                return `
+<div class="product-card">
+    <img src="${imageUrl}" alt="${p.name}" loading="lazy">
+    <h3>${p.name}</h3>
+    <p>${p.category_name || 'Fresh Products'}</p>
+    <div class="price">₹${p.price} / ${p.unit}</div>
+    ${button}
+</div>
+`;
             }
             
             container.innerHTML = products.map(p => {
@@ -1487,7 +1611,8 @@ document.getElementById('checkout-btn').addEventListener('click', () => {
         //     document.querySelectorAll('.payment-option').forEach(el => el.classList.remove('selected'));
         //     event.target.classList.add('selected');
         // }
-
+selectedPayment = 'cod';
+document.querySelector('.payment-option').classList.add('selected');
         function selectPayment(el, method) {
     selectedPayment = method;
     document.querySelectorAll('.payment-option').forEach(e => e.classList.remove('selected'));
