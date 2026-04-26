@@ -157,41 +157,40 @@
             padding: 20px;
         }
 
-.header {
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    background: linear-gradient(135deg, #10b981, #059669);
-    padding: 12px 16px;
-}
+        .header {
+            background: white;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
 
-/* ROW FIX */
-.header-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
 
-/* SEARCH FULL WIDTH */
-.header-search {
-    margin-top: 10px;
-}
+        .header h1 {
+            font-size: 24px;
+            color: var(--primary);
+        }
 
-.header-search input {
-    width: 100%;
-    padding: 12px 14px;
-    border-radius: 12px;
-    border: none;
-    font-size: 14px;
-}
-
-/* CART BUTTON FIX */
-.cart-btn {
-    background: white;
-    color: #10b981;
-    border-radius: 10px;
-    padding: 6px 10px;
-}
+        .cart-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            position: relative;
+        }
 
         #cart-count {
             background: var(--danger);
@@ -211,7 +210,6 @@
 
         .categories {
             background: white;
-             margin: 6px 12px 10px;
             padding: 16px;
             border-bottom: 1px solid var(--border);
             overflow-x: auto;
@@ -219,20 +217,26 @@
         }
 
         .category-btn {
-    padding: 8px 14px;
-    border-radius: 20px;
-    font-size: 13px;
-    background: #f3f4f6;
-}
+            display: inline-block;
+            padding: 8px 16px;
+            margin-right: 10px;
+            background: var(--light);
+            border: 2px solid transparent;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
 
         .category-btn:hover {
             background: #e5e7eb;
         }
 
         .category-btn.active {
-    background: #10b981;
-    color: white;
-}
+            background: var(--primary);
+            color: white;
+        }
 
         .products-header {
             display: flex;
@@ -265,12 +269,13 @@
         }
 
         .product-card {
-    border-radius: 16px;
-    overflow: hidden;
-    background: #fff;
-    box-shadow: 0 6px 14px rgba(0,0,0,0.08);
-    padding-bottom: 10px;
-}
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            position: relative;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
 
         .product-card:hover {
             transform: translateY(-4px);
@@ -278,37 +283,45 @@
         }
 
         .product-card img {
-    height: 130px;
-    object-fit: contain;
-    background: #f9fafb;
-    padding: 8px;
-}
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+        }
 
-.product-card h3 {
-    font-size: 14px;
-    font-weight: 600;
-    margin: 6px 10px 2px;
-}
+        .product-card h3 {
+            padding: 12px 12px 4px;
+            font-size: 16px;
+            font-weight: 600;
+        }
 
-.product-card p {
-    font-size: 12px;
-    color: #6b7280;
-    margin: 0 10px;
-}
+        .product-card p {
+            padding: 0 12px;
+            font-size: 13px;
+            color: #6b7280;
+            margin-bottom: 8px;
+        }
 
-.product-card .price {
-    font-size: 15px;
-    margin: 6px 10px;
-}
+        .product-card .price {
+            padding: 0 12px;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 12px;
+            display: block;
+        }
 
         .product-card button {
-    margin: 6px 10px;
-    border-radius: 8px;
-    font-size: 13px;
-    padding: 8px;
-    background: #10b981;
-    font-weight: 600;
-}
+            width: calc(100% - 24px);
+            margin: 0 12px 12px;
+            padding: 10px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+        }
 
         .product-card button:hover {
             background: var(--primary-dark);
@@ -340,44 +353,6 @@
             min-width: 30px;
             text-align: center;
         }
-
-        /* PRODUCT CARD UPGRADE */
-.product-card {
-    transition: 0.2s ease;
-}
-
-.product-card:hover {
-    transform: translateY(-4px);
-}
-
-/* BADGE */
-.product-card::before {
-    content: "Fresh";
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    background: #10b981;
-    color: white;
-    font-size: 11px;
-    padding: 4px 6px;
-    border-radius: 6px;
-}
-
-/* FLOATING CART */
-.floating-cart {
-    position: fixed;
-    bottom: 90px;
-    right: 16px;
-    width: 48px;
-    height: 48px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #10b981;
-    border-radius: 50%;
-    box-shadow: 0 8px 18px rgba(0,0,0,0.2);
-    z-index: 999;
-}
 
         .bottom-nav {
             position: fixed;
@@ -659,33 +634,6 @@
     border-color: #10b981;
 }
 
-/* HERO */
-.hero-slider {
-    margin: 8px 12px;
-    border-radius: 12px;
-}
-
-.slides {
-    display: flex;
-    animation: slide 9s infinite;
-}
-
-.slide {
-    min-width: 100%;
-    padding: 20px;
-    text-align: center;
-    background: linear-gradient(135deg,#10b981,#059669);
-    color: white;
-    font-weight: bold;
-}
-
-@keyframes slide {
-    0%{transform:translateX(0)}
-    33%{transform:translateX(-100%)}
-    66%{transform:translateX(-200%)}
-    100%{transform:translateX(0)}
-}
-
         @keyframes slideIn {
             from {
                 transform: translateX(400px);
@@ -784,7 +732,7 @@
 
         <!-- Main Screen -->
         <div id="main-screen" class="screen">
-            <!-- <header class="header">
+            <header class="header">
                 <div class="header-content">
                     <h1>🛒 ShiviMart</h1>
                     <button id="cart-btn" class="cart-btn">
@@ -792,34 +740,11 @@
                         <span id="cart-count">0</span>
                     </button>
                 </div>
-            </header> -->
-            
+            </header>
 
-<header class="header">
-
-    <div class="header-top">
-        <h1 style="color:white; font-size:20px;">🛒 ShiviMart</h1>
-
-        <button id="cart-btn" class="cart-btn">
-            🛒 <span id="cart-count">0</span>
-        </button>
-    </div>
-
-    <div class="header-search">
-        <input type="search" id="search-input" placeholder="Search fruits, vegetables...">
-    </div>
-
-</header>
             <div class="pages-wrapper">
                 <!-- Home Page -->
                 <div id="page-home" class="page active">
-                    <div class="hero-slider">
-    <div class="slides">
-        <div class="slide">🌿 Farm Fresh Vegetables</div>
-        <div class="slide">⚡ Delivery in 30 mins</div>
-        <div class="slide">🔥 Best Deals Today</div>
-    </div>
-</div>
                     <div class="categories" id="categories-container"></div>
                     <div class="container">
                         <div class="products-header">
@@ -918,7 +843,7 @@
                         <div class="form-group">
     <label>Payment Method *</label>
 
-    <!-- <div class="payment-options">
+    <div class="payment-options">
 
         <label class="payment-option">
             <input type="radio" name="payment" value="cod" checked>
@@ -935,22 +860,7 @@
             💳 Card (via delivery)
         </label>
 
-    </div> -->
-    <div class="payment-options">
-
-<label class="payment-option" onclick="selectPayment(this,'cod')">
-<input type="radio" name="payment"> 💵 Cash on Delivery
-</label>
-
-<label class="payment-option" onclick="selectPayment(this,'upi')">
-<input type="radio" name="payment"> 📱 UPI (via delivery)
-</label>
-
-<label class="payment-option" onclick="selectPayment(this,'card')">
-<input type="radio" name="payment"> 💳 Card (via delivery)
-</label>
-
-</div>
+    </div>
 </div>
                         <div class="cart-summary">
                             <div class="summary-row">
@@ -988,9 +898,6 @@
 
     <!-- Toast Container -->
     <div id="toast-container"></div>
-    <div class="floating-cart" onclick="openModal('cart-modal')">
-    🛒
-</div>
 
     <script>
         // ========================================
@@ -1294,15 +1201,7 @@ async function loadUserAddress() {
             
             if (products.length === 0) {
                 container.innerHTML = '<div class="empty-state"><p>No products found</p></div>';
-                return `
-<div class="product-card">
-    <img src="${imageUrl}" alt="${p.name}" loading="lazy">
-    <h3>${p.name}</h3>
-    <p>${p.category_name || 'Fresh Products'}</p>
-    <div class="price">₹${p.price} / ${p.unit}</div>
-    ${button}
-</div>
-`;
+                return;
             }
             
             container.innerHTML = products.map(p => {
@@ -1588,8 +1487,7 @@ document.getElementById('checkout-btn').addEventListener('click', () => {
         //     document.querySelectorAll('.payment-option').forEach(el => el.classList.remove('selected'));
         //     event.target.classList.add('selected');
         // }
-selectedPayment = 'cod';
-document.querySelector('.payment-option').classList.add('selected');
+
         function selectPayment(el, method) {
     selectedPayment = method;
     document.querySelectorAll('.payment-option').forEach(e => e.classList.remove('selected'));
