@@ -112,9 +112,8 @@ async function sendWhatsAppOTP(mobile, otp) {
       formattedMobile = "91" + formattedMobile;
     }
 
-    // YOUR CREDENTIALS
     const AUTH_KEY = "509731AB7GUd9k69e34ffaP1";
-    const INTEGRATED_NUMBER = "919818932110"; // Your number is now active!
+    const INTEGRATED_NUMBER = "919818932110";
     const TEMPLATE_NAMESPACE = "8e8f020c_bc47_4bdc_b4a6_9d5465a895a5";
 
     const payload = {
@@ -124,7 +123,7 @@ async function sendWhatsAppOTP(mobile, otp) {
         messaging_product: "whatsapp",
         type: "template",
         template: {
-          name: "otp_auth", // Make sure this matches your approved template name
+          name: "otp_auth",
           language: {
             code: "en",
             policy: "deterministic",
@@ -135,10 +134,11 @@ async function sendWhatsAppOTP(mobile, otp) {
               to: [formattedMobile],
               components: {
                 body_1: {
+                  // Only ONE variable {{1}} for OTP
                   type: "text",
                   value: otp,
                 },
-                // Remove button_1 if your template doesn't have a button
+                // REMOVED body_2 because template only has {{1}}
               },
             },
           ],
@@ -147,7 +147,7 @@ async function sendWhatsAppOTP(mobile, otp) {
     };
 
     console.log("📱 Sending WhatsApp OTP to:", formattedMobile);
-    console.log("🔑 Using number:", INTEGRATED_NUMBER);
+    console.log("📦 Payload:", JSON.stringify(payload, null, 2));
 
     const response = await axios.post(
       "https://api.msg91.com/api/v5/whatsapp/whatsapp-outbound-message/bulk/",
@@ -160,16 +160,26 @@ async function sendWhatsAppOTP(mobile, otp) {
       },
     );
 
-    console.log("✅ MSG91 Response:", JSON.stringify(response.data, null, 2));
-    console.log("✅ WhatsApp OTP sent successfully");
+    console.log(
+      "✅ Success! Response:",
+      JSON.stringify(response.data, null, 2),
+    );
 
     return {
       success: true,
-      message: "OTP sent successfully",
+      message: "OTP sent successfully via WhatsApp",
       data: response.data,
     };
   } catch (error) {
-    console.error("❌ Error:", error.response?.data || error.message);
+    console.error("❌ WhatsApp OTP Error:");
+    console.error("Status:", error.response?.status);
+    console.error("Error Data:", JSON.stringify(error.response?.data, null, 2));
+    console.error("Message:", error.message);
+
+    // Fallback for development
+    if (process.env.NODE_ENV === "development") {
+      console.log(`📱 DEV MODE - OTP for ${mobile}: ${otp}`);
+    }
 
     return {
       success: false,
