@@ -102,6 +102,99 @@ function generateOTP() {
 }
 
 // Helper function to send OTP via WhatsApp using MSG91
+// async function sendWhatsAppOTP(mobile, otp) {
+//   try {
+//     const axios = require("axios");
+
+//     // Format mobile number
+//     let formattedMobile = mobile.replace(/[\s\-\(\)\+]/g, "");
+//     if (!formattedMobile.startsWith("91")) {
+//       formattedMobile = "91" + formattedMobile;
+//     }
+
+//     const AUTH_KEY = "513005A7fRzpVJ69f42f2cP1";
+//     const INTEGRATED_NUMBER = "919818932110";
+//     const TEMPLATE_NAMESPACE = "8e8f020c_bc47_4bdc_b4a6_9d5465a895a5";
+
+//     const payload = {
+//       integrated_number: INTEGRATED_NUMBER,
+//       content_type: "template",
+//       payload: {
+//         messaging_product: "whatsapp",
+//         type: "template",
+//         template: {
+//           name: "otp_auth",
+//           language: {
+//             code: "en",
+//             policy: "deterministic",
+//           },
+//           namespace: TEMPLATE_NAMESPACE,
+//           to_and_components: [
+//             {
+//               to: [formattedMobile],
+//               components: {
+//                 body_1: {
+//                   // Only ONE variable {{1}} for OTP
+//                   type: "text",
+//                   value: otp,
+//                 },
+//                 button_1: {
+//                   subtype: "url",
+//                   type: "text",
+//                   value: "<{{url text variable}}>",
+//                 },
+//                 // REMOVED body_2 because template only has {{1}}
+//               },
+//             },
+//           ],
+//         },
+//       },
+//     };
+
+//     console.log("📱 Sending WhatsApp OTP to:", formattedMobile);
+//     console.log("📦 Payload:", JSON.stringify(payload, null, 2));
+
+//     const response = await axios.post(
+//       "https://api.msg91.com/api/v5/whatsapp/whatsapp-outbound-message/bulk/",
+//       payload,
+//       {
+//         headers: {
+//           "Content-Type": "application/json",
+//           authkey: AUTH_KEY,
+//         },
+//       },
+//     );
+
+//     console.log(
+//       "✅ Success! Response:",
+//       JSON.stringify(response.data, null, 2),
+//     );
+
+//     return {
+//       success: true,
+//       message: "OTP sent successfully via WhatsApp",
+//       data: response.data,
+//     };
+//   } catch (error) {
+//     console.error("❌ WhatsApp OTP Error:");
+//     console.error("Status:", error.response?.status);
+//     console.error("Error Data:", JSON.stringify(error.response?.data, null, 2));
+//     console.error("Message:", error.message);
+
+//     // Fallback for development
+//     if (process.env.NODE_ENV === "development") {
+//       console.log(`📱 DEV MODE - OTP for ${mobile}: ${otp}`);
+//     }
+
+//     return {
+//       success: false,
+//       message: "Failed to send WhatsApp OTP",
+//       error: error.response?.data || error.message,
+//     };
+//   }
+// }
+
+// Helper function to send OTP via WhatsApp using MSG91
 async function sendWhatsAppOTP(mobile, otp) {
   try {
     const axios = require("axios");
@@ -112,9 +205,15 @@ async function sendWhatsAppOTP(mobile, otp) {
       formattedMobile = "91" + formattedMobile;
     }
 
-    const AUTH_KEY = "513005A7fRzpVJ69f42f2cP1";
-    const INTEGRATED_NUMBER = "919818932110";
-    const TEMPLATE_NAMESPACE = "8e8f020c_bc47_4bdc_b4a6_9d5465a895a5";
+    const AUTH_KEY = process.env.MSG91_AUTH_KEY || "513005A7fRzpVJ69f42f2cP1";
+    const INTEGRATED_NUMBER =
+      process.env.MSG91_WHATSAPP_NUMBER || "919818932110";
+    const TEMPLATE_NAMESPACE =
+      process.env.MSG91_TEMPLATE_NAMESPACE ||
+      "8e8f020c_bc47_4bdc_b4a6_9d5465a895a5";
+
+    // Button URL with OTP parameter
+    const buttonUrl = `https://shivimart.softgensys.com/?otp=${otp}`;
 
     const payload = {
       integrated_number: INTEGRATED_NUMBER,
@@ -134,16 +233,14 @@ async function sendWhatsAppOTP(mobile, otp) {
               to: [formattedMobile],
               components: {
                 body_1: {
-                  // Only ONE variable {{1}} for OTP
                   type: "text",
                   value: otp,
                 },
                 button_1: {
                   subtype: "url",
                   type: "text",
-                  value: "<{{url text variable}}>",
+                  value: buttonUrl, // ✅ Dynamic URL with OTP
                 },
-                // REMOVED body_2 because template only has {{1}}
               },
             },
           ],
@@ -152,6 +249,7 @@ async function sendWhatsAppOTP(mobile, otp) {
     };
 
     console.log("📱 Sending WhatsApp OTP to:", formattedMobile);
+    console.log("🔗 Button URL:", buttonUrl);
     console.log("📦 Payload:", JSON.stringify(payload, null, 2));
 
     const response = await axios.post(
