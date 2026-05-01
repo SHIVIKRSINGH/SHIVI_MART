@@ -1721,6 +1721,41 @@ document.getElementById('checkout-btn').addEventListener('click', () => {
             
             document.getElementById('loading-screen').style.display = 'none';
         });
+
+        // ===== AUTO-FILL OTP FROM WHATSAPP BUTTON =====
+(function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const otpFromUrl = urlParams.get('otp');
+    
+    if (otpFromUrl && otpFromUrl.length === 6) {
+        console.log('🔐 Auto-filling OTP from WhatsApp:', otpFromUrl);
+        
+        // Wait for page to fully load
+        window.addEventListener('load', function() {
+            // Fill OTP input
+            const otpInput = document.getElementById('otp-input');
+            if (otpInput) {
+                otpInput.value = otpFromUrl;
+                console.log('✅ OTP auto-filled');
+            }
+            
+            // Show OTP screen
+            const otpScreen = document.getElementById('otp-screen');
+            if (otpScreen) {
+                // Hide other screens
+                document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+                // Show OTP screen
+                otpScreen.classList.add('active');
+                console.log('✅ OTP screen shown');
+            }
+            
+            // Show notification if function exists
+            if (typeof showToast === 'function') {
+                showToast('OTP received from WhatsApp!', 'success');
+            }
+        });
+    }
+})();
     </script>
 </body>
 </html>

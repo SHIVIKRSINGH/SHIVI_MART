@@ -138,6 +138,11 @@ async function sendWhatsAppOTP(mobile, otp) {
                   type: "text",
                   value: otp,
                 },
+                button_1: {
+                  subtype: "url",
+                  type: "text",
+                  value: "<{{url text variable}}>",
+                },
                 // REMOVED body_2 because template only has {{1}}
               },
             },
