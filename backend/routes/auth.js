@@ -112,7 +112,7 @@ async function sendWhatsAppOTP(mobile, otp) {
       formattedMobile = "91" + formattedMobile;
     }
 
-    const AUTH_KEY = "509731AB7GUd9k69e34ffaP1";
+    const AUTH_KEY = "513005A7fRzpVJ69f42f2cP1";
     const INTEGRATED_NUMBER = "919818932110";
     const TEMPLATE_NAMESPACE = "8e8f020c_bc47_4bdc_b4a6_9d5465a895a5";
 
