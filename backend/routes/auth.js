@@ -9,6 +9,99 @@ function generateOTP() {
 }
 
 // Helper function to send OTP via WhatsApp using MSG91
+// async function sendWhatsAppOTP(mobile, otp) {
+//   try {
+//     const axios = require("axios");
+
+//     // Format mobile number
+//     let formattedMobile = mobile.replace(/[\s\-\(\)\+]/g, "");
+//     if (!formattedMobile.startsWith("91")) {
+//       formattedMobile = "91" + formattedMobile;
+//     }
+
+//     const payload = {
+//       integrated_number: "919818932110",
+//       content_type: "template",
+//       payload: {
+//         messaging_product: "whatsapp",
+//         type: "template",
+//         template: {
+//           language: {
+//             code: "en",
+//             policy: "deterministic",
+//           },
+//           to_and_components: [
+//             {
+//               to: [formattedMobile],
+//               components: {
+//                 body_1: {
+//                   type: "text",
+//                   value: otp,
+//                 },
+//               },
+//             },
+//           ],
+//         },
+//       },
+//     };
+
+//     console.log("📱 Sending WhatsApp OTP to:", formattedMobile);
+//     console.log("📦 Full Payload:", JSON.stringify(payload, null, 2));
+
+//     const response = await axios.post(
+//       "https://api.msg91.com/api/v5/whatsapp/whatsapp-outbound-message/bulk/",
+//       payload,
+//       {
+//         headers: {
+//           "Content-Type": "application/json",
+//         },
+//       },
+//     );
+
+//     console.log("✅ MSG91 API Response Status:", response.status);
+//     console.log(
+//       "✅ MSG91 API Response Data:",
+//       JSON.stringify(response.data, null, 2),
+//     );
+//     console.log("✅ WhatsApp OTP sent successfully");
+
+//     return {
+//       success: true,
+//       message: "OTP sent successfully",
+//       data: response.data,
+//     };
+//   } catch (error) {
+//     console.error("❌ WhatsApp OTP Error Details:");
+//     console.error("   Status:", error.response?.status);
+//     console.error("   Status Text:", error.response?.statusText);
+//     console.error(
+//       "   Response Data:",
+//       JSON.stringify(error.response?.data, null, 2),
+//     );
+//     console.error("   Error Message:", error.message);
+//     console.error("   Request URL:", error.config?.url);
+//     console.error(
+//       "   Request Headers:",
+//       JSON.stringify(error.config?.headers, null, 2),
+//     );
+
+//     // Fallback - log OTP in development
+//     console.log(`📱 DEV MODE - OTP for ${mobile}: ${otp}`);
+
+//     return {
+//       success: false,
+//       message: "Failed to send WhatsApp OTP",
+//       error: error.response?.data || error.message,
+//     };
+//   }
+// }
+
+// Helper function to generate 6-digit OTP
+function generateOTP() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// Helper function to send OTP via WhatsApp using MSG91
 async function sendWhatsAppOTP(mobile, otp) {
   try {
     const axios = require("axios");
@@ -19,17 +112,24 @@ async function sendWhatsAppOTP(mobile, otp) {
       formattedMobile = "91" + formattedMobile;
     }
 
+    // YOUR CREDENTIALS
+    const AUTH_KEY = "509731AB7GUd9k69e34ffaP1";
+    const INTEGRATED_NUMBER = "919818932110"; // Your number is now active!
+    const TEMPLATE_NAMESPACE = "8e8f020c_bc47_4bdc_b4a6_9d5465a895a5";
+
     const payload = {
-      integrated_number: "919818932110",
+      integrated_number: INTEGRATED_NUMBER,
       content_type: "template",
       payload: {
         messaging_product: "whatsapp",
         type: "template",
         template: {
+          name: "otp_auth", // Make sure this matches your approved template name
           language: {
             code: "en",
             policy: "deterministic",
           },
+          namespace: TEMPLATE_NAMESPACE,
           to_and_components: [
             {
               to: [formattedMobile],
@@ -38,6 +138,7 @@ async function sendWhatsAppOTP(mobile, otp) {
                   type: "text",
                   value: otp,
                 },
+                // Remove button_1 if your template doesn't have a button
               },
             },
           ],
@@ -46,7 +147,7 @@ async function sendWhatsAppOTP(mobile, otp) {
     };
 
     console.log("📱 Sending WhatsApp OTP to:", formattedMobile);
-    console.log("📦 Full Payload:", JSON.stringify(payload, null, 2));
+    console.log("🔑 Using number:", INTEGRATED_NUMBER);
 
     const response = await axios.post(
       "https://api.msg91.com/api/v5/whatsapp/whatsapp-outbound-message/bulk/",
@@ -54,15 +155,12 @@ async function sendWhatsAppOTP(mobile, otp) {
       {
         headers: {
           "Content-Type": "application/json",
+          authkey: AUTH_KEY,
         },
       },
     );
 
-    console.log("✅ MSG91 API Response Status:", response.status);
-    console.log(
-      "✅ MSG91 API Response Data:",
-      JSON.stringify(response.data, null, 2),
-    );
+    console.log("✅ MSG91 Response:", JSON.stringify(response.data, null, 2));
     console.log("✅ WhatsApp OTP sent successfully");
 
     return {
@@ -71,22 +169,7 @@ async function sendWhatsAppOTP(mobile, otp) {
       data: response.data,
     };
   } catch (error) {
-    console.error("❌ WhatsApp OTP Error Details:");
-    console.error("   Status:", error.response?.status);
-    console.error("   Status Text:", error.response?.statusText);
-    console.error(
-      "   Response Data:",
-      JSON.stringify(error.response?.data, null, 2),
-    );
-    console.error("   Error Message:", error.message);
-    console.error("   Request URL:", error.config?.url);
-    console.error(
-      "   Request Headers:",
-      JSON.stringify(error.config?.headers, null, 2),
-    );
-
-    // Fallback - log OTP in development
-    console.log(`📱 DEV MODE - OTP for ${mobile}: ${otp}`);
+    console.error("❌ Error:", error.response?.data || error.message);
 
     return {
       success: false,
@@ -96,6 +179,7 @@ async function sendWhatsAppOTP(mobile, otp) {
   }
 }
 
+module.exports = { generateOTP, sendWhatsAppOTP };
 // POST /api/auth/send-otp
 // Send OTP to mobile number
 router.post("/send-otp", async (req, res) => {
