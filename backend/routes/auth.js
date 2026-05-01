@@ -26,12 +26,10 @@ async function sendWhatsAppOTP(mobile, otp) {
         messaging_product: "whatsapp",
         type: "template",
         template: {
-          name: "otp_auth",
           language: {
             code: "en",
             policy: "deterministic",
           },
-          namespace: "8e8f020c_bc47_4bdc_b4a6_9d5465a895a5",
           to_and_components: [
             {
               to: [formattedMobile],
@@ -49,7 +47,6 @@ async function sendWhatsAppOTP(mobile, otp) {
 
     console.log("📱 Sending WhatsApp OTP to:", formattedMobile);
     console.log("📦 Full Payload:", JSON.stringify(payload, null, 2));
-    console.log("🔑 Auth Key:", "513005A7fRzpVJ69f42f2cP1");
 
     const response = await axios.post(
       "https://api.msg91.com/api/v5/whatsapp/whatsapp-outbound-message/bulk/",
@@ -57,7 +54,6 @@ async function sendWhatsAppOTP(mobile, otp) {
       {
         headers: {
           "Content-Type": "application/json",
-          authkey: "513005A7fRzpVJ69f42f2cP1",
         },
       },
     );
