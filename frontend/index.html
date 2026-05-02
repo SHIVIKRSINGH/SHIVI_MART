@@ -732,7 +732,7 @@
 
         <!-- Main Screen -->
         <div id="main-screen" class="screen">
-            <header class="header">
+            <!-- <header class="header">
                 <div class="header-content">
                     <h1>🛒 ShiviMart</h1>
                     <button id="cart-btn" class="cart-btn">
@@ -740,8 +740,24 @@
                         <span id="cart-count">0</span>
                     </button>
                 </div>
-            </header>
+            </header> -->
 
+            <header class="header">
+    <div class="header-content">
+        <h1>🛒 ShiviMart</h1>
+        <div style="display: flex; gap: 10px;">
+            <!-- Quick Order Button -->
+            <button onclick="openQuickOrder()" class="cart-btn" style="background: #f59e0b;">
+                💬 Quick Order
+            </button>
+            <!-- Cart Button -->
+            <button id="cart-btn" class="cart-btn">
+                🛒 Cart
+                <span id="cart-count">0</span>
+            </button>
+        </div>
+    </div>
+</header>
             <div class="pages-wrapper">
                 <!-- Home Page -->
                 <div id="page-home" class="page active">
@@ -882,6 +898,43 @@
             </div>
         </div>
 
+        <!-- Quick Order Chat Modal (Enhanced) -->
+<div id="quick-order-modal" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h2>💬 Message ShiviMart</h2>
+            <button class="close-btn" onclick="closeModal('quick-order-modal')">&times;</button>
+        </div>
+        
+        <!-- Chat Messages Area -->
+        <div class="modal-body" style="max-height: 400px; overflow-y: auto; padding: 0;">
+            <div id="chat-messages" style="padding: 20px;">
+                <!-- Messages will appear here -->
+            </div>
+        </div>
+        
+        <!-- Input Area -->
+        <div class="modal-footer" style="border-top: 1px solid #e5e7eb; padding: 15px;">
+            <div style="display: flex; gap: 10px; align-items: flex-end;">
+                <textarea 
+                    id="quick-order-text" 
+                    rows="2" 
+                    placeholder="Type your message..."
+                    style="flex: 1; resize: none; padding: 10px; border: 2px solid #e5e7eb; border-radius: 8px;"
+                    onkeypress="if(event.key==='Enter' && !event.shiftKey) { event.preventDefault(); sendQuickOrder(); }"
+                ></textarea>
+                <button 
+                    id="send-quick-order-btn"
+                    class="btn btn-primary" 
+                    onclick="sendQuickOrder()"
+                    style="padding: 10px 20px; height: fit-content;"
+                >
+                    📤 Send
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
         <!-- Success Modal -->
         <div id="success-modal" class="modal">
             <div class="modal-content">
@@ -1721,6 +1774,137 @@ document.getElementById('checkout-btn').addEventListener('click', () => {
             
             document.getElementById('loading-screen').style.display = 'none';
         });
+    </script>
+    <script>
+        // ========================================
+// CUSTOMER CHAT WITH STATUS TRACKING
+// ========================================
+
+let currentConversationId = null;
+let chatRefreshInterval = null;
+
+async function openQuickOrder() {
+    openModal('quick-order-modal');
+    
+    // Load existing conversation
+    await loadCustomerChat();
+    
+    // Start polling for new messages
+    chatRefreshInterval = setInterval(loadCustomerChat, 3000); // Refresh every 3 seconds
+    
+    document.getElementById('quick-order-text').focus();
+}
+
+async function loadCustomerChat() {
+    try {
+        const response = await apiCall('/customer/conversation');
+        
+        const chatContainer = document.getElementById('chat-messages');
+        
+        if (!response.messages || response.messages.length === 0) {
+            chatContainer.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #6b7280;">
+                    <p>No messages yet. Start a conversation!</p>
+                </div>
+            `;
+            return;
+        }
+        
+        currentConversationId = response.conversation.id;
+        
+        // Display messages
+        chatContainer.innerHTML = response.messages.map(msg => {
+            const isCustomer = msg.sender_type === 'customer';
+            const statusIcon = getStatusIcon(msg.status);
+            
+            return `
+                <div style="margin-bottom: 15px; display: flex; justify-content: ${isCustomer ? 'flex-end' : 'flex-start'};">
+                    <div style="
+                        max-width: 70%;
+                        padding: 10px 15px;
+                        border-radius: 12px;
+                        background: ${isCustomer ? '#10b981' : '#f3f4f6'};
+                        color: ${isCustomer ? 'white' : '#1f2937'};
+                    ">
+                        ${!isCustomer ? `<strong style="font-size: 12px;">ShiviMart</strong><br>` : ''}
+                        <div>${msg.message_text}</div>
+                        <div style="font-size: 11px; margin-top: 5px; opacity: 0.7;">
+                            ${new Date(msg.created_at).toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'})}
+                            ${isCustomer ? statusIcon : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        // Scroll to bottom
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+        
+    } catch (error) {
+        console.error('Load chat error:', error);
+    }
+}
+
+function getStatusIcon(status) {
+    const icons = {
+        'sending': '🕐',
+        'sent': '✓',
+        'delivered': '✓✓',
+        'read': '<span style="color: #60a5fa;">✓✓</span>',
+        'failed': '❌'
+    };
+    return icons[status] || '';
+}
+
+async function sendQuickOrder() {
+    const orderText = document.getElementById('quick-order-text').value.trim();
+    
+    if (!orderText) {
+        showToast('Please type a message', 'error');
+        return;
+    }
+    
+    const userName = localStorage.getItem('user_name') || 'Customer';
+    const userMobile = localStorage.getItem('user_mobile') || '';
+    const userAddress = localStorage.getItem('user_address') || '';
+    
+    const sendBtn = document.getElementById('send-quick-order-btn');
+    const originalText = sendBtn.textContent;
+    
+    try {
+        sendBtn.disabled = true;
+        sendBtn.textContent = '📤 Sending...';
+        
+        await apiCall('/orders/quick-order', 'POST', {
+            orderText: orderText,
+            customerName: userName,
+            customerMobile: userMobile,
+            customerAddress: userAddress
+        });
+        
+        document.getElementById('quick-order-text').value = '';
+        
+        // Reload chat to show new message
+        await loadCustomerChat();
+        
+    } catch (error) {
+        console.error('Send error:', error);
+        showToast(error.message || 'Failed to send', 'error');
+    } finally {
+        sendBtn.disabled = false;
+        sendBtn.textContent = originalText;
+    }
+}
+
+// Stop polling when modal closes
+function closeModal(id) {
+    document.getElementById(id).classList.remove('active');
+    
+    if (id === 'quick-order-modal' && chatRefreshInterval) {
+        clearInterval(chatRefreshInterval);
+        chatRefreshInterval = null;
+    }
+}
     </script>
 </body>
 </html>
