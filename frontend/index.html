@@ -1636,7 +1636,7 @@ document.getElementById('checkout-btn').addEventListener('click', () => {
         //     }
         // });
 
-        document.getElementById('checkout-form').addEventListener('submit', async (e) => {
+    document.getElementById('checkout-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     
     // ✅ 1. Check time slot
@@ -1661,28 +1661,39 @@ document.getElementById('checkout-btn').addEventListener('click', () => {
     const discountAmount = 0;
     const totalAmount = subtotal + deliveryFee - discountAmount;
     
-    // ✅ 4. Get user and address info
+    // ✅ 4. Get address info (includes society_id)
     const addressId = parseInt(localStorage.getItem('address_id'));
     
-    // Get society_id from address
+    if (!addressId) {
+        showToast('Address information missing. Please update your profile.', 'error');
+        return;
+    }
+    
     let societyId = null;
+    
     try {
         const addressRes = await apiCall('/societies/my-addresses');
-        const address = addressRes.addresses.find(a => a.id === addressId);
-        if (address) {
-            societyId = address.society_id;
+        
+        if (!addressRes.addresses || addressRes.addresses.length === 0) {
+            showToast('No address found. Please update your profile.', 'error');
+            return;
         }
+        
+        const address = addressRes.addresses.find(a => a.id === addressId) || addressRes.addresses[0];
+        societyId = address.society_id;
+        
+        if (!societyId) {
+            showToast('Society information missing in address', 'error');
+            return;
+        }
+        
     } catch (err) {
-        showToast('Failed to get address info', 'error');
+        console.error('Address fetch error:', err);
+        showToast('Failed to get address details: ' + err.message, 'error');
         return;
     }
     
-    if (!societyId) {
-        showToast('Society information missing', 'error');
-        return;
-    }
-    
-    // ✅ 5. Prepare order data (CORRECT FORMAT)
+    // ✅ 5. Prepare order data
     const orderData = {
         user_id: parseInt(userId),
         society_id: societyId,
@@ -1720,7 +1731,7 @@ document.getElementById('checkout-btn').addEventListener('click', () => {
         document.getElementById('order-number').textContent = response.order_number || `#${response.order_id}`;
         openModal('success-modal');
         
-        // Reset selections
+        // Reset
         selectedTimeSlot = null;
         
         showToast('Order placed successfully!', 'success');
