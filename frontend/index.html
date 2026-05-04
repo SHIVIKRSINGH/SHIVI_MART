@@ -1570,15 +1570,82 @@ document.getElementById('checkout-btn').addEventListener('click', () => {
         //         showToast('Please select a payment method', 'error');
         //         return;
         //     }
+        // document.getElementById('checkout-form').addEventListener('submit', async (e) => {
+        //     e.preventDefault();
+            
+        //     if (!selectedTimeSlot) {
+        //         showToast('Please select a delivery time slot', 'error');
+        //         return;
+        //     }
+    
+        //     // ✅ FIX: Get payment from radio button
+        //     const paymentInput = document.querySelector('input[name="payment"]:checked');
+            
+        //     if (!paymentInput) {
+        //         showToast('Please select a payment method', 'error');
+        //         return;
+        //     }
+            
+        //     selectedPayment = paymentInput.value;
+            
+        //     // const orderData = {
+        //     //     customer_name: document.getElementById('checkout-name').value,
+        //     //     mobile: document.getElementById('checkout-mobile').value,
+        //     //     delivery_address: document.getElementById('checkout-address').value,
+        //     //     delivery_time_slot: selectedTimeSlot,
+        //     //     payment_method: selectedPayment,
+        //     //     items: cartItems.map(item => ({
+        //     //         product_id: item.id,
+        //     //         quantity: item.quantity,
+        //     //         price: item.price
+        //     //     })),
+        //     //     total_amount: cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+        //     // };
+        //         const orderData = {
+        //             address_id: parseInt(localStorage.getItem('address_id')), // ✅ IMPORTANT
+        //             delivery_slot_id: selectedTimeSlot, // (we’ll fix below)
+        //             delivery_date: new Date().toISOString().split('T')[0],
+        //             payment_method: selectedPayment,
+        //             items: cartItems.map(item => ({
+        //                 product_id: item.id,
+        //                 quantity: item.quantity
+        //             }))
+        //     };
+
+        //     try {
+        //         const response = await apiCall('/orders', 'POST', orderData);
+                
+        //         // Clear cart
+        //         cartItems = [];
+        //         saveCart();
+        //         updateCartUI();
+                
+        //         // Close checkout
+        //         closeModal('checkout-modal');
+                
+        //         // Show success
+        //         document.getElementById('order-number').textContent = `#${response.order_id || response.id || 'PENDING'}`;
+        //         openModal('success-modal');
+                
+        //         // Reset selections
+        //         selectedTimeSlot = null;
+        //         selectedPayment = null;
+        //     } catch (error) {
+        //         console.error('Order error:', error);
+        //         showToast(error.message || 'Failed to place order', 'error');
+        //     }
+        // });
+
         document.getElementById('checkout-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     
+    // ✅ 1. Check time slot
     if (!selectedTimeSlot) {
         showToast('Please select a delivery time slot', 'error');
         return;
     }
     
-    // ✅ FIX: Get payment from radio button
+    // ✅ 2. Get payment method from radio button
     const paymentInput = document.querySelector('input[name="payment"]:checked');
     
     if (!paymentInput) {
@@ -1586,55 +1653,55 @@ document.getElementById('checkout-btn').addEventListener('click', () => {
         return;
     }
     
-    selectedPayment = paymentInput.value;
-            
-            // const orderData = {
-            //     customer_name: document.getElementById('checkout-name').value,
-            //     mobile: document.getElementById('checkout-mobile').value,
-            //     delivery_address: document.getElementById('checkout-address').value,
-            //     delivery_time_slot: selectedTimeSlot,
-            //     payment_method: selectedPayment,
-            //     items: cartItems.map(item => ({
-            //         product_id: item.id,
-            //         quantity: item.quantity,
-            //         price: item.price
-            //     })),
-            //     total_amount: cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
-            // };
-                const orderData = {
-                    address_id: parseInt(localStorage.getItem('address_id')), // ✅ IMPORTANT
-                    delivery_slot_id: selectedTimeSlot, // (we’ll fix below)
-                    delivery_date: new Date().toISOString().split('T')[0],
-                    payment_method: selectedPayment,
-                    items: cartItems.map(item => ({
-                        product_id: item.id,
-                        quantity: item.quantity
-                    }))
-            };
-
-            try {
-                const response = await apiCall('/orders', 'POST', orderData);
-                
-                // Clear cart
-                cartItems = [];
-                saveCart();
-                updateCartUI();
-                
-                // Close checkout
-                closeModal('checkout-modal');
-                
-                // Show success
-                document.getElementById('order-number').textContent = `#${response.order_id || response.id || 'PENDING'}`;
-                openModal('success-modal');
-                
-                // Reset selections
-                selectedTimeSlot = null;
-                selectedPayment = null;
-            } catch (error) {
-                console.error('Order error:', error);
-                showToast(error.message || 'Failed to place order', 'error');
-            }
-        });
+    const paymentMethod = paymentInput.value;
+    
+    // ✅ 3. Get address_id from localStorage
+    const addressId = localStorage.getItem('address_id');
+    
+    if (!addressId) {
+        showToast('Address information missing. Please update your profile.', 'error');
+        return;
+    }
+    
+    // ✅ 4. Prepare order data
+    const orderData = {
+        address_id: parseInt(addressId),
+        delivery_slot_id: selectedTimeSlot,
+        delivery_date: new Date().toISOString().split('T')[0],
+        payment_method: paymentMethod,
+        items: cartItems.map(item => ({
+            product_id: item.id,
+            quantity: item.quantity
+        }))
+    };
+    
+    console.log('📦 Submitting order:', orderData);
+    
+    try {
+        const response = await apiCall('/orders', 'POST', orderData);
+        
+        // Clear cart
+        cartItems = [];
+        saveCart();
+        updateCartUI();
+        
+        // Close checkout
+        closeModal('checkout-modal');
+        
+        // Show success
+        document.getElementById('order-number').textContent = `#${response.order_id || response.id || 'PENDING'}`;
+        openModal('success-modal');
+        
+        // Reset selections
+        selectedTimeSlot = null;
+        
+        showToast('Order placed successfully!', 'success');
+        
+    } catch (error) {
+        console.error('❌ Order error:', error);
+        showToast(error.message || 'Failed to place order', 'error');
+    }
+});
 
         function closeSuccess() {
             closeModal('success-modal');
