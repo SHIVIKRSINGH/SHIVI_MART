@@ -1450,12 +1450,19 @@ async function loadSlots() {
         container.innerHTML = res.slots.map(slot => {
 
             // 🔥 FIX: manual time parsing
-            const [hours, minutes] = slot.slot_start.split(':');
+            // const [hours, minutes] = slot.slot_start.split(':');
 
-            const slotDateTime = new Date();
-            slotDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+            // const slotDateTime = new Date();
+            // slotDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
-            const isPast = slotDateTime < now;
+            // const isPast = slotDateTime < now;
+            // ✅ FIX: Check END time, not START time
+const [endHours, endMinutes] = slot.slot_end.split(':');
+
+const slotEndTime = new Date();
+slotEndTime.setHours(parseInt(endHours), parseInt(endMinutes), 0, 0);
+
+const isPast = slotEndTime < now; // Expired only if END time has passed
 
             return `
                 <div class="time-slot ${isPast ? 'disabled' : ''}"
@@ -1551,18 +1558,35 @@ document.getElementById('checkout-btn').addEventListener('click', () => {
     document.querySelectorAll('.payment-option').forEach(e => e.classList.remove('selected'));
     el.classList.add('selected');
 }
+        // document.getElementById('checkout-form').addEventListener('submit', async (e) => {
+        //     e.preventDefault();
+            
+        //     if (!selectedTimeSlot) {
+        //         showToast('Please select a delivery time slot', 'error');
+        //         return;
+        //     }
+            
+        //     if (!selectedPayment) {
+        //         showToast('Please select a payment method', 'error');
+        //         return;
+        //     }
         document.getElementById('checkout-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            if (!selectedTimeSlot) {
-                showToast('Please select a delivery time slot', 'error');
-                return;
-            }
-            
-            if (!selectedPayment) {
-                showToast('Please select a payment method', 'error');
-                return;
-            }
+    e.preventDefault();
+    
+    if (!selectedTimeSlot) {
+        showToast('Please select a delivery time slot', 'error');
+        return;
+    }
+    
+    // ✅ FIX: Get payment from radio button
+    const paymentInput = document.querySelector('input[name="payment"]:checked');
+    
+    if (!paymentInput) {
+        showToast('Please select a payment method', 'error');
+        return;
+    }
+    
+    selectedPayment = paymentInput.value;
             
             // const orderData = {
             //     customer_name: document.getElementById('checkout-name').value,
