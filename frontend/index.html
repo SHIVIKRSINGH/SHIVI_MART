@@ -1645,7 +1645,7 @@ document.getElementById('checkout-btn').addEventListener('click', () => {
         return;
     }
     
-    // ✅ 2. Get payment method from radio button
+    // ✅ 2. Get payment method
     const paymentInput = document.querySelector('input[name="payment"]:checked');
     
     if (!paymentInput) {
@@ -1655,24 +1655,52 @@ document.getElementById('checkout-btn').addEventListener('click', () => {
     
     const paymentMethod = paymentInput.value;
     
-    // ✅ 3. Get address_id from localStorage
-    const addressId = localStorage.getItem('address_id');
+    // ✅ 3. Calculate totals
+    const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const deliveryFee = 0;
+    const discountAmount = 0;
+    const totalAmount = subtotal + deliveryFee - discountAmount;
     
-    if (!addressId) {
-        showToast('Address information missing. Please update your profile.', 'error');
+    // ✅ 4. Get user and address info
+    const addressId = parseInt(localStorage.getItem('address_id'));
+    
+    // Get society_id from address
+    let societyId = null;
+    try {
+        const addressRes = await apiCall('/societies/my-addresses');
+        const address = addressRes.addresses.find(a => a.id === addressId);
+        if (address) {
+            societyId = address.society_id;
+        }
+    } catch (err) {
+        showToast('Failed to get address info', 'error');
         return;
     }
     
-    // ✅ 4. Prepare order data
+    if (!societyId) {
+        showToast('Society information missing', 'error');
+        return;
+    }
+    
+    // ✅ 5. Prepare order data (CORRECT FORMAT)
     const orderData = {
-        address_id: parseInt(addressId),
+        user_id: parseInt(userId),
+        society_id: societyId,
+        delivery_address: document.getElementById('checkout-address').value,
         delivery_slot_id: selectedTimeSlot,
-        delivery_date: new Date().toISOString().split('T')[0],
-        payment_method: paymentMethod,
         items: cartItems.map(item => ({
             product_id: item.id,
-            quantity: item.quantity
-        }))
+            quantity: item.quantity,
+            unit_price: item.price,
+            discount_amount: 0,
+            total_price: item.price * item.quantity
+        })),
+        subtotal: subtotal,
+        discount_amount: discountAmount,
+        delivery_fee: deliveryFee,
+        total_amount: totalAmount,
+        payment_method: paymentMethod,
+        special_instructions: ''
     };
     
     console.log('📦 Submitting order:', orderData);
@@ -1689,7 +1717,7 @@ document.getElementById('checkout-btn').addEventListener('click', () => {
         closeModal('checkout-modal');
         
         // Show success
-        document.getElementById('order-number').textContent = `#${response.order_id || response.id || 'PENDING'}`;
+        document.getElementById('order-number').textContent = response.order_number || `#${response.order_id}`;
         openModal('success-modal');
         
         // Reset selections
