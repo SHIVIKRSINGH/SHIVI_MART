@@ -25,8 +25,7 @@ router.post("/", async (req, res) => {
 
     // Validate required fields
     if (
-      !user_id ||
-      !society_id ||
+      !user_id ||      
       !delivery_address ||
       !delivery_slot_id ||
       !items ||
