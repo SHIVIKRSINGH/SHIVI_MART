@@ -1636,18 +1636,123 @@ document.getElementById('checkout-btn').addEventListener('click', () => {
         //     }
         // });
 
-    document.getElementById('checkout-form').addEventListener('submit', async (e) => {
+//     document.getElementById('checkout-form').addEventListener('submit', async (e) => {
+//     e.preventDefault();
+    
+//     // ✅ 1. Check time slot
+//     if (!selectedTimeSlot) {
+//         showToast('Please select a delivery time slot', 'error');
+//         return;
+//     }
+    
+//     // ✅ 2. Get payment method
+//     const paymentInput = document.querySelector('input[name="payment"]:checked');
+    
+//     if (!paymentInput) {
+//         showToast('Please select a payment method', 'error');
+//         return;
+//     }
+    
+//     const paymentMethod = paymentInput.value;
+    
+//     // ✅ 3. Calculate totals
+//     const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+//     const deliveryFee = 0;
+//     const discountAmount = 0;
+//     const totalAmount = subtotal + deliveryFee - discountAmount;
+    
+//     // ✅ 4. Get address info (includes society_id)
+//     const addressId = parseInt(localStorage.getItem('address_id'));
+    
+//     if (!addressId) {
+//         showToast('Address information missing. Please update your profile.', 'error');
+//         return;
+//     }
+    
+//     let societyId = null;
+    
+//     try {
+//         const addressRes = await apiCall('/societies/my-addresses');
+        
+//         if (!addressRes.addresses || addressRes.addresses.length === 0) {
+//             showToast('No address found. Please update your profile.', 'error');
+//             return;
+//         }
+        
+//         const address = addressRes.addresses.find(a => a.id === addressId) || addressRes.addresses[0];
+//         societyId = address.society_id;
+        
+//         if (!societyId) {
+//             showToast('Society information missing in address', 'error');
+//             return;
+//         }
+        
+//     } catch (err) {
+//         console.error('Address fetch error:', err);
+//         showToast('Failed to get address details: ' + err.message, 'error');
+//         return;
+//     }
+    
+//     // ✅ 5. Prepare order data
+//     const orderData = {
+//         user_id: parseInt(userId),
+//         society_id: societyId,
+//         delivery_address: document.getElementById('checkout-address').value,
+//         delivery_slot_id: selectedTimeSlot,
+//         items: cartItems.map(item => ({
+//             product_id: item.id,
+//             quantity: item.quantity,
+//             unit_price: item.price,
+//             discount_amount: 0,
+//             total_price: item.price * item.quantity
+//         })),
+//         subtotal: subtotal,
+//         discount_amount: discountAmount,
+//         delivery_fee: deliveryFee,
+//         total_amount: totalAmount,
+//         payment_method: paymentMethod,
+//         special_instructions: ''
+//     };
+    
+//     console.log('📦 Submitting order:', orderData);
+    
+//     try {
+//         const response = await apiCall('/orders', 'POST', orderData);
+        
+//         // Clear cart
+//         cartItems = [];
+//         saveCart();
+//         updateCartUI();
+        
+//         // Close checkout
+//         closeModal('checkout-modal');
+        
+//         // Show success
+//         document.getElementById('order-number').textContent = response.order_number || `#${response.order_id}`;
+//         openModal('success-modal');
+        
+//         // Reset
+//         selectedTimeSlot = null;
+        
+//         showToast('Order placed successfully!', 'success');
+        
+//     } catch (error) {
+//         console.error('❌ Order error:', error);
+//         showToast(error.message || 'Failed to place order', 'error');
+//     }
+// });
+
+        document.getElementById('checkout-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    // ✅ 1. Check time slot
+    // Check time slot
     if (!selectedTimeSlot) {
         showToast('Please select a delivery time slot', 'error');
         return;
     }
     
-    // ✅ 2. Get payment method
+    // Get payment method
     const paymentInput = document.querySelector('input[name="payment"]:checked');
-    
     if (!paymentInput) {
         showToast('Please select a payment method', 'error');
         return;
@@ -1655,45 +1760,35 @@ document.getElementById('checkout-btn').addEventListener('click', () => {
     
     const paymentMethod = paymentInput.value;
     
-    // ✅ 3. Calculate totals
+    // Calculate totals
     const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const deliveryFee = 0;
     const discountAmount = 0;
     const totalAmount = subtotal + deliveryFee - discountAmount;
     
-    // ✅ 4. Get address info (includes society_id)
-    const addressId = parseInt(localStorage.getItem('address_id'));
-    
-    if (!addressId) {
-        showToast('Address information missing. Please update your profile.', 'error');
-        return;
-    }
-    
+    // Get society_id (FIXED APPROACH)
     let societyId = null;
     
     try {
         const addressRes = await apiCall('/societies/my-addresses');
         
-        if (!addressRes.addresses || addressRes.addresses.length === 0) {
-            showToast('No address found. Please update your profile.', 'error');
-            return;
+        if (addressRes.addresses && addressRes.addresses.length > 0) {
+            const addr = addressRes.addresses[0]; // Use first address
+            societyId = addr.society_id;
+            
+            console.log('✅ Got society_id:', societyId);
         }
-        
-        const address = addressRes.addresses.find(a => a.id === addressId) || addressRes.addresses[0];
-        societyId = address.society_id;
-        
-        if (!societyId) {
-            showToast('Society information missing in address', 'error');
-            return;
-        }
-        
     } catch (err) {
         console.error('Address fetch error:', err);
-        showToast('Failed to get address details: ' + err.message, 'error');
-        return;
     }
     
-    // ✅ 5. Prepare order data
+    // Fallback: If no society_id, use a default (ID 1)
+    if (!societyId) {
+        console.warn('⚠️ No society_id found, using default');
+        societyId = 1; // Default society - CHANGE THIS if needed
+    }
+    
+    // Prepare order
     const orderData = {
         user_id: parseInt(userId),
         society_id: societyId,
@@ -1714,26 +1809,21 @@ document.getElementById('checkout-btn').addEventListener('click', () => {
         special_instructions: ''
     };
     
-    console.log('📦 Submitting order:', orderData);
+    console.log('📦 Order data:', orderData);
     
     try {
         const response = await apiCall('/orders', 'POST', orderData);
         
-        // Clear cart
+        // Success!
         cartItems = [];
         saveCart();
         updateCartUI();
-        
-        // Close checkout
         closeModal('checkout-modal');
         
-        // Show success
         document.getElementById('order-number').textContent = response.order_number || `#${response.order_id}`;
         openModal('success-modal');
         
-        // Reset
         selectedTimeSlot = null;
-        
         showToast('Order placed successfully!', 'success');
         
     } catch (error) {
