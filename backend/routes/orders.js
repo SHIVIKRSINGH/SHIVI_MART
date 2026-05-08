@@ -23,9 +23,31 @@ router.post("/", async (req, res) => {
       special_instructions,
     } = req.body;
 
+    // const {
+    //   user_id,
+    //   address_id,
+    //   delivery_address,
+    //   delivery_slot_id,
+    //   items,
+    //   subtotal,
+    //   discount_amount,
+    //   delivery_fee,
+    //   total_amount,
+    //   payment_method,
+    //   special_instructions,
+    // } = req.body;
+
     // Validate required fields
+    // if (
+    //   !user_id ||
+    //   !delivery_address ||
+    //   !delivery_slot_id ||
+    //   !items ||
+    //   items.length === 0
+    // )
     if (
-      !user_id ||      
+      !user_id ||
+      !society_id ||
       !delivery_address ||
       !delivery_slot_id ||
       !items ||
@@ -34,6 +56,8 @@ router.post("/", async (req, res) => {
       await connection.rollback();
       return res.status(400).json({ error: "Missing required fields" });
     }
+
+    // const society_id = addressRows[0].society_id;
 
     // Check stock availability for all items BEFORE creating order
     for (const item of items) {
