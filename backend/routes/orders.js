@@ -80,8 +80,10 @@ router.post("/", async (req, res) => {
         });
       }
     }
-    console.log("✅ society_id:", society_id);
-    console.log("✅ delivery_address:", delivery_address);
+    // console.log("✅ society_id:", society_id);
+    console.log("✅ society_id:", req.body.society_id);
+    // console.log("✅ delivery_address:", delivery_address);
+    console.log("✅ delivery_address:", req.body.delivery_address);
 
     // Generate order number
     const orderNumber = "ORD" + Date.now();
