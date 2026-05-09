@@ -1026,7 +1026,7 @@ async function loadUserAddress() {
             userAddress = `Flat ${addr.flat_no}, ${addr.tower_no || ''}, ${addr.society_name}`;
 
             localStorage.setItem('user_address', userAddress);
-            localStorage.setItem('society_id', addr.society_id);
+            // localStorage.setItem('society_id', addr.society_id);
 
             return true;
         }
@@ -1963,25 +1963,55 @@ document.getElementById('checkout-btn').addEventListener('click', () => {
     // ✅ 2. Get addresses
     const res = await apiCall('/societies/my-addresses');
 
+    // if (res.addresses && res.addresses.length > 0) {
+    //     const addr = res.addresses.find(a => a.is_default) || res.addresses[0];
+
+    //     userAddress = `Flat ${addr.flat_no}, ${addr.tower_no || ''}, ${addr.society_name}`;
+
+    //     localStorage.setItem('user_address', userAddress);
+    //     localStorage.setItem('society_id', addr.society_id);
+    //     // localStorage.setItem('society_id', societyId);
+
+    //     // ✅ GO TO MAIN SCREEN
+    //     showScreen('main-screen');
+    //     loadProducts();
+
+    // } else {
+    //     // ❌ NO ADDRESS → show form
+    //     loadSocieties();
+    //     showScreen('address-screen');
+    // }
     if (res.addresses && res.addresses.length > 0) {
-        const addr = res.addresses.find(a => a.is_default) || res.addresses[0];
 
-        userAddress = `Flat ${addr.flat_no}, ${addr.tower_no || ''}, ${addr.society_name}`;
+    const addr =
+        res.addresses.find(a => a.is_default)
+        || res.addresses[0];
 
-        localStorage.setItem('user_address', userAddress);
-        localStorage.setItem('society_id', addr.society_id);
-        localStorage.setItem('society_id', societyId);
+    userAddress =
+        `Flat ${addr.flat_no}, ${addr.tower_no || ''}, ${addr.society_name}`;
 
-        // ✅ GO TO MAIN SCREEN
-        showScreen('main-screen');
-        loadProducts();
+    localStorage.setItem(
+        'user_address',
+        userAddress
+    );
 
-    } else {
-        // ❌ NO ADDRESS → show form
-        loadSocieties();
-        showScreen('address-screen');
-    }
+    localStorage.setItem(
+        'society_id',
+        addr.society_id
+    );
 
+    // ✅ GO TO MAIN SCREEN
+    showScreen('main-screen');
+
+    loadProducts();
+
+} else {
+
+    // ❌ NO ADDRESS
+    loadSocieties();
+
+    showScreen('address-screen');
+}
 } catch (err) {
     console.error(err);
     loadSocieties();
